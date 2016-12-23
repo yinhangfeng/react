@@ -10,13 +10,13 @@
  */
 'use strict';
 
-describe('ReactDOMProduction', function() {
+describe('ReactDOMProduction', () => {
   var oldProcess;
 
   var React;
   var ReactDOM;
 
-  beforeEach(function() {
+  beforeEach(() => {
     __DEV__ = false;
     oldProcess = process;
     global.process = {env: {NODE_ENV: 'production'}};
@@ -26,12 +26,12 @@ describe('ReactDOMProduction', function() {
     ReactDOM = require('ReactDOM');
   });
 
-  afterEach(function() {
+  afterEach(() => {
     __DEV__ = true;
     global.process = oldProcess;
   });
 
-  it('should use prod fbjs', function() {
+  it('should use prod fbjs', () => {
     var warning = require('warning');
 
     spyOn(console, 'error');
@@ -39,7 +39,7 @@ describe('ReactDOMProduction', function() {
     expect(console.error.calls.count()).toBe(0);
   });
 
-  it('should use prod React', function() {
+  it('should use prod React', () => {
     spyOn(console, 'error');
 
     // no key warning
@@ -48,7 +48,7 @@ describe('ReactDOMProduction', function() {
     expect(console.error.calls.count()).toBe(0);
   });
 
-  it('should handle a simple flow', function() {
+  it('should handle a simple flow', () => {
     class Component extends React.Component {
       render() {
         return <span>{this.props.children}</span>;
@@ -86,7 +86,95 @@ describe('ReactDOMProduction', function() {
     expect(container.childNodes.length).toBe(0);
   });
 
-  it('should throw with an error code in production', function() {
+  it('should call lifecycle methods', () => {
+    var log = [];
+    class Component extends React.Component {
+      state = {y: 1};
+      shouldComponentUpdate(nextProps, nextState) {
+        log.push(['shouldComponentUpdate', nextProps, nextState]);
+        return nextProps.x !== this.props.x || nextState.y !== this.state.y;
+      }
+      componentWillMount() {
+        log.push(['componentWillMount']);
+      }
+      componentDidMount() {
+        log.push(['componentDidMount']);
+      }
+      componentWillReceiveProps(nextProps) {
+        log.push(['componentWillReceiveProps', nextProps]);
+      }
+      componentWillUpdate(nextProps, nextState) {
+        log.push(['componentWillUpdate', nextProps, nextState]);
+      }
+      componentDidUpdate(prevProps, prevState) {
+        log.push(['componentDidUpdate', prevProps, prevState]);
+      }
+      componentWillUnmount() {
+        log.push(['componentWillUnmount']);
+      }
+      render() {
+        log.push(['render']);
+        return null;
+      }
+    }
+
+    var container = document.createElement('div');
+    var inst = ReactDOM.render(
+      <Component x={1} />,
+      container
+    );
+    expect(log).toEqual([
+      ['componentWillMount'],
+      ['render'],
+      ['componentDidMount'],
+    ]);
+    log = [];
+
+    inst.setState({y: 2});
+    expect(log).toEqual([
+      ['shouldComponentUpdate', {x: 1}, {y: 2}],
+      ['componentWillUpdate', {x: 1}, {y: 2}],
+      ['render'],
+      ['componentDidUpdate', {x: 1}, {y: 1}],
+    ]);
+    log = [];
+
+    inst.setState({y: 2});
+    expect(log).toEqual([
+      ['shouldComponentUpdate', {x: 1}, {y: 2}],
+    ]);
+    log = [];
+
+    ReactDOM.render(
+      <Component x={2} />,
+      container
+    );
+    expect(log).toEqual([
+      ['componentWillReceiveProps', {x: 2}],
+      ['shouldComponentUpdate', {x: 2}, {y: 2}],
+      ['componentWillUpdate', {x: 2}, {y: 2}],
+      ['render'],
+      ['componentDidUpdate', {x: 1}, {y: 2}],
+    ]);
+    log = [];
+
+    ReactDOM.render(
+      <Component x={2} />,
+      container
+    );
+    expect(log).toEqual([
+      ['componentWillReceiveProps', {x: 2}],
+      ['shouldComponentUpdate', {x: 2}, {y: 2}],
+    ]);
+    log = [];
+
+    ReactDOM.unmountComponentAtNode(container);
+    expect(log).toEqual([
+      ['componentWillUnmount'],
+    ]);
+  });
+
+  it('should throw with an error code in production', () => {
     expect(function() {
       class Component extends React.Component {
         render() {
