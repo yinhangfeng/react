@@ -1,14 +1,83 @@
 const React = require('react');
 const ReactDOM = require('react-dom');
 
+require('./injectResponderEventPlugin');
+
 class App extends React.Component {
+    constructor() {
+        super();
+        this.state = {
+            test1: 1,
+        };
+    }
     render() {
         return (
             <div ref="root">
-                <h1>Hello React!</h1>
+                <h1>Hello React!{this.state.test1}</h1>
                 <Test1>
                     <p ref="test_ref">test ref</p>
                 </Test1>
+                <button onClick={() => {
+                    console.log(this.state);
+                    setTimeout(() => {
+                        console.log(this.state)
+                        this.setState({
+                            test1: this.state.test1 + 1,
+                        });
+                        console.log(this.state);
+                        this.setState({
+                            test1: this.state.test1 + 1,
+                        });
+                        console.log(this.state);
+                    });
+                    
+                }}>test1</button>
+                <div
+                    onStartShouldSetResponderCapture={(e) => {
+                        console.log('onStartShouldSetResponderCapture', e);
+                    }}
+                    onStartShouldSetResponder={(e) => {
+                        console.log('onStartShouldSetResponder', e);
+                        return true;
+                    }}
+                    onScrollShouldSetResponderCapture={(e) => {
+                        console.log('onScrollShouldSetResponderCapture', e);
+                    }}
+                    onScrollShouldSetResponder={(e) => {
+                        console.log('onScrollShouldSetResponder', e);
+                    }}
+                    onMoveShouldSetResponderCapture={(e) => {
+                        console.log('onMoveShouldSetResponderCapture', e);
+                    }}
+                    onMoveShouldSetResponder={(e) => {
+                        console.log('onMoveShouldSetResponder', e);
+                        return true;
+                    }}
+                    onResponderStart={(e) => {
+                        console.log('onResponderStart', e);
+                    }}
+                    onResponderMove={(e) => {
+                        console.log('onResponderMove', e);
+                    }}
+                    onResponderEnd={(e) => {
+                        console.log('onResponderEnd', e);
+                    }}
+                    onResponderRelease={(e) => {
+                        console.log('onResponderRelease', e);
+                    }}
+                    onResponderTerminationRequest={(e) => {
+                        console.log('onResponderTerminationRequest', e);
+                    }}
+                    onResponderGrant={(e) => {
+                        console.log('onResponderGrant', e);
+                    }}
+                    onResponderReject={(e) => {
+                        console.log('onResponderReject', e);
+                    }}
+                    onResponderTerminate={(e) => {
+                        console.log('onResponderTerminate', e);
+                    }}
+                    style={{width: '100%', height: '300px', backgroundColor: '#99aa77'}}></div>
             </div>
         );
     }
@@ -28,4 +97,4 @@ class Test1 extends React.Component {
     }
 }
 
-ReactDOM.render(, document.getElementById('root'));
+ReactDOM.render(<App/>, document.getElementById('root'));
