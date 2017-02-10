@@ -26,13 +26,13 @@ describe('ReactComponent', () => {
     var container = document.createElement('div');
     // jQuery objects are basically arrays; people often pass them in by mistake
     expect(function() {
-      ReactDOM.render(<div></div>, [container]);
+      ReactDOM.render(<div />, [container]);
     }).toThrowError(
       '_registerComponent(...): Target container is not a DOM element.'
     );
 
     expect(function() {
-      ReactDOM.render(<div></div>, null);
+      ReactDOM.render(<div />, null);
     }).toThrowError(
       '_registerComponent(...): Target container is not a DOM element.'
     );
@@ -115,7 +115,7 @@ describe('ReactComponent', () => {
     }
 
     var instance = <Component />;
-    instance = ReactTestUtils.renderIntoDocument(instance);
+    ReactTestUtils.renderIntoDocument(instance);
   });
 
   it('should not have refs on unmounted components', () => {
@@ -136,7 +136,7 @@ describe('ReactComponent', () => {
     }
 
     var instance = <Parent child={<span />} />;
-    instance = ReactTestUtils.renderIntoDocument(instance);
+    ReactTestUtils.renderIntoDocument(instance);
   });
 
   it('should support new-style refs', () => {
@@ -174,7 +174,7 @@ describe('ReactComponent', () => {
     }
 
     var instance = <Component />;
-    instance = ReactTestUtils.renderIntoDocument(instance);
+    ReactTestUtils.renderIntoDocument(instance);
     expect(mounted).toBe(true);
   });
 
@@ -217,7 +217,7 @@ describe('ReactComponent', () => {
     }
 
     var instance = <Component />;
-    instance = ReactTestUtils.renderIntoDocument(instance);
+    ReactTestUtils.renderIntoDocument(instance);
     expect(mounted).toBe(true);
   });
 
@@ -327,7 +327,9 @@ describe('ReactComponent', () => {
     var X = undefined;
     expect(() => ReactTestUtils.renderIntoDocument(<X />)).toThrowError(
       'Element type is invalid: expected a string (for built-in components) ' +
-      'or a class/function (for composite components) but got: undefined.'
+      'or a class/function (for composite components) but got: undefined. ' +
+      'You likely forgot to export your component from the file it\'s ' +
+      'defined in.'
     );
 
     var Y = null;
@@ -338,6 +340,25 @@ describe('ReactComponent', () => {
 
     // One warning for each element creation
     expect(console.error.calls.count()).toBe(2);
+  });
+
+  it('includes owner name in the error about badly-typed elements', () => {
+    spyOn(console, 'error');
+
+    function Foo() {
+      var X = undefined;
+      return <X />;
+    }
+
+    expect(() => ReactTestUtils.renderIntoDocument(<Foo />)).toThrowError(
+      'Element type is invalid: expected a string (for built-in components) ' +
+      'or a class/function (for composite components) but got: undefined. ' +
+      'You likely forgot to export your component from the file it\'s ' +
+      'defined in. Check the render method of `Foo`.'
+    );
+
+    // One warning for each element creation
+    expect(console.error.calls.count()).toBe(1);
   });
 
 });
