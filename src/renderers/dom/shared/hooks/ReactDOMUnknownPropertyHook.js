@@ -1,10 +1,8 @@
 /**
- * Copyright 2013-present, Facebook, Inc.
- * All rights reserved.
+ * Copyright (c) 2013-present, Facebook, Inc.
  *
- * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  *
  * @providesModule ReactDOMUnknownPropertyHook
  */
@@ -13,6 +11,7 @@
 
 var DOMProperty = require('DOMProperty');
 var EventPluginRegistry = require('EventPluginRegistry');
+var isCustomComponent = require('isCustomComponent');
 
 if (__DEV__) {
   var warning = require('fbjs/lib/warning');
@@ -38,7 +37,10 @@ if (__DEV__) {
   var warnedProperties = {};
   var hasOwnProperty = Object.prototype.hasOwnProperty;
   var EVENT_NAME_REGEX = /^on[A-Z]/;
-  var ARIA_NAME_REGEX = /^aria-/i;
+  var rARIA = new RegExp('^(aria)-[' + DOMProperty.ATTRIBUTE_NAME_CHAR + ']*$');
+  var rARIACamel = new RegExp(
+    '^(aria)[A-Z][' + DOMProperty.ATTRIBUTE_NAME_CHAR + ']*$',
+  );
   var possibleStandardNames = require('possibleStandardNames');
 
   var validateProperty = function(tagName, name, value, debugID) {
@@ -69,7 +71,7 @@ if (__DEV__) {
     if (registrationName != null) {
       warning(
         false,
-        'Unknown event handler property `%s`. Did you mean `%s`?%s',
+        'Invalid event handler property `%s`. Did you mean `%s`?%s',
         name,
         registrationName,
         getStackAddendum(debugID),
@@ -78,8 +80,19 @@ if (__DEV__) {
       return true;
     }
 
+    if (lowerCasedName.indexOf('on') === 0) {
+      warning(
+        false,
+        'Unknown event handler property `%s`. It will be ignored.%s',
+        name,
+        getStackAddendum(debugID),
+      );
+      warnedProperties[name] = true;
+      return true;
+    }
+
     // Let the ARIA attribute hook validate ARIA attributes
-    if (ARIA_NAME_REGEX.test(name)) {
+    if (rARIA.test(name) || rARIACamel.test(name)) {
       return true;
     }
 
@@ -104,6 +117,33 @@ if (__DEV__) {
       return true;
     }
 
+    if (lowerCasedName === 'aria') {
+      warning(
+        false,
+        'The `aria` attribute is reserved for future use in React. ' +
+          'Pass individual `aria-` attributes instead.',
+      );
+      warnedProperties[name] = true;
+      return true;
+    }
+
+    if (
+      lowerCasedName === 'is' &&
+      value !== null &&
+      value !== undefined &&
+      typeof value !== 'string'
+    ) {
+      warning(
+        false,
+        'Received a `%s` for string attribute `is`. If this is expected, cast ' +
+          'the value to a string.%s',
+        typeof value,
+        getStackAddendum(debugID),
+      );
+      warnedProperties[name] = true;
+      return true;
+    }
+
     if (typeof value === 'number' && isNaN(value)) {
       warning(
         false,
@@ -115,6 +155,8 @@ if (__DEV__) {
       warnedProperties[name] = true;
       return true;
     }
+
+    const isReserved = DOMProperty.isReservedProp(name);
 
     // Known attributes should match the casing specified in the property config.
     if (possibleStandardNames.hasOwnProperty(lowerCasedName)) {
@@ -130,11 +172,40 @@ if (__DEV__) {
         warnedProperties[name] = true;
         return true;
       }
+    } else if (!isReserved && name !== lowerCasedName) {
+      // Unknown attributes should have lowercase casing since that's how they
+      // will be cased anyway with server rendering.
+      warning(
+        false,
+        'React does not recognize the `%s` prop on a DOM element. If you ' +
+          'intentionally want it to appear in the DOM as a custom ' +
+          'attribute, spell it as lowercase `%s` instead. ' +
+          'If you accidentally passed it from a parent component, remove ' +
+          'it from the DOM element.%s',
+        name,
+        lowerCasedName,
+        getStackAddendum(debugID),
+      );
+      warnedProperties[name] = true;
+      return true;
+    }
+
+    if (typeof value === 'boolean') {
+      warning(
+        DOMProperty.shouldAttributeAcceptBooleanValue(name),
+        'Received `%s` for non-boolean attribute `%s`. If this is expected, cast ' +
+          'the value to a string.%s',
+        value,
+        name,
+        getStackAddendum(debugID),
+      );
+      warnedProperties[name] = true;
+      return true;
     }
 
     // Now that we've validated casing, do not validate
     // data types for reserved props
-    if (DOMProperty.isReservedProp(name)) {
+    if (isReserved) {
       return true;
     }
 
@@ -154,29 +225,16 @@ var warnUnknownProperties = function(type, props, debugID) {
     var isValid = validateProperty(type, key, props[key], debugID);
     if (!isValid) {
       unknownProps.push(key);
-      var value = props[key];
-      if (typeof value === 'object' && value !== null) {
-        warning(
-          false,
-          'The %s prop on <%s> is not a known property, and was given an object.' +
-            'Remove it, or it will appear in the ' +
-            'DOM after a future React update.%s',
-          key,
-          type,
-          getStackAddendum(debugID),
-        );
-      }
     }
   }
 
   var unknownPropString = unknownProps.map(prop => '`' + prop + '`').join(', ');
-
   if (unknownProps.length === 1) {
     warning(
       false,
-      'Invalid prop %s on <%s> tag. Either remove this prop from the element, ' +
+      'Invalid value for prop %s on <%s> tag. Either remove it from the element, ' +
         'or pass a string or number value to keep it in the DOM. ' +
-        'For details, see https://fb.me/react-unknown-prop%s',
+        'For details, see https://fb.me/react-attribute-behavior%s',
       unknownPropString,
       type,
       getStackAddendum(debugID),
@@ -184,9 +242,9 @@ var warnUnknownProperties = function(type, props, debugID) {
   } else if (unknownProps.length > 1) {
     warning(
       false,
-      'Invalid props %s on <%s> tag. Either remove these props from the element, ' +
+      'Invalid values for props %s on <%s> tag. Either remove them from the element, ' +
         'or pass a string or number value to keep them in the DOM. ' +
-        'For details, see https://fb.me/react-unknown-prop%s',
+        'For details, see https://fb.me/react-attribute-behavior%s',
       unknownPropString,
       type,
       getStackAddendum(debugID),
@@ -195,7 +253,7 @@ var warnUnknownProperties = function(type, props, debugID) {
 };
 
 function validateProperties(type, props, debugID /* Stack only */) {
-  if (type.indexOf('-') >= 0 || props.is) {
+  if (isCustomComponent(type, props)) {
     return;
   }
   warnUnknownProperties(type, props, debugID);

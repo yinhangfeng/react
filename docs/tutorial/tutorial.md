@@ -56,7 +56,8 @@ If you want to do it, here are the steps to follow:
 2. Follow the [installation instructions](/react/docs/installation.html#creating-a-new-application) to create a new project.
 3. Delete all files in the `src/` folder of the new project.
 4. Add a file named `index.css` in the `src/` folder with [this CSS code](https://codepen.io/gaearon/pen/oWWQNa?editors=0100).
-5. Add a file named `index.js` in the `src/` folder with [this JS code](https://codepen.io/gaearon/pen/oWWQNa?editors=0010), and then add three lines to the top of it:
+5. Add a file named `index.js` in the `src/` folder with [this JS code](https://codepen.io/gaearon/pen/oWWQNa?editors=0010).
+6. Add these three lines to the top of `index.js` in the `src/` folder:
 
     ```js
     import React from 'react';
@@ -1038,7 +1039,7 @@ Add a method called `jumpTo` to the Game class:
   }
 ```
 
-Then update `stepNumber` when a new move is made by adding `stepNumber: history.length` to the state update in Game's `handleClick`:
+Then update `stepNumber` when a new move is made by adding `stepNumber: history.length` to the state update in Game's `handleClick`. We'll also update `handleClick` to be aware of `stepNumber` when reading the current board state so that you can go back in time then click in the board to create a new entry.:
 
 ```javascript{2,13}
   handleClick(i) {
@@ -1073,8 +1074,6 @@ Now you can modify Game's `render` to read from that step in the history:
 [View the current code.](https://codepen.io/gaearon/pen/gWWZgR?editors=0010)
 
 If you click any move link now, the board should immediately update to show what the game looked like at that time.
-
-You may also want to update `handleClick` to be aware of `stepNumber` when reading the current board state so that you can go back in time then click in the board to create a new entry. (Hint: It's easiest to `.slice()` off the extra elements from `history` at the very top of `handleClick`.)
 
 ### Wrapping Up
 

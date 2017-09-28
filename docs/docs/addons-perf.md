@@ -6,6 +6,10 @@ layout: docs
 category: Add-Ons
 ---
 
+> Note:
+>
+> As of React 16, `react-addons-perf` is not supported. Please use [your browser's profiling tools](/react/docs/optimizing-performance.html#profiling-components-with-the-chrome-performance-tab) to get insight into which components re-render.
+
 **Importing**
 
 ```javascript
@@ -91,7 +95,7 @@ Get the opaque data structure describing measurements from the last start-stop s
 Perf.printInclusive(measurements)
 ```
 
-Prints the overall time taken. If no argument's passed, defaults to all the measurements from the last recording. This prints a nicely formatted table in the console, like so:
+Prints the overall time taken. When no arguments are passed, `printInclusive` defaults to all the measurements from the last recording. This prints a nicely formatted table in the console, like so:
 
 ![](/react/img/docs/perf-inclusive.png)
 

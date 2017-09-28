@@ -1,10 +1,8 @@
 /**
- * Copyright 2013-present, Facebook, Inc.
- * All rights reserved.
+ * Copyright (c) 2013-present, Facebook, Inc.
  *
- * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  *
  * @providesModule ReactDOMFiberComponent
  * @flow
@@ -40,10 +38,10 @@ if (__DEV__) {
   var ReactDOMUnknownPropertyHook = require('ReactDOMUnknownPropertyHook');
   var {validateProperties: validateARIAProperties} = ReactDOMInvalidARIAHook;
   var {
-    validateProperties: validateInputPropertes,
+    validateProperties: validateInputProperties,
   } = ReactDOMNullInputValuePropHook;
   var {
-    validateProperties: validateUnknownPropertes,
+    validateProperties: validateUnknownProperties,
   } = ReactDOMUnknownPropertyHook;
 }
 
@@ -72,8 +70,8 @@ if (__DEV__) {
 
   var validatePropertiesInDevelopment = function(type, props) {
     validateARIAProperties(type, props);
-    validateInputPropertes(type, props);
-    validateUnknownPropertes(type, props);
+    validateInputProperties(type, props);
+    validateUnknownProperties(type, props);
   };
 
   var warnForTextDifference = function(serverText: string, clientText: string) {
@@ -157,6 +155,14 @@ function ensureListeningTo(rootContainerElement, registrationName) {
   listenTo(registrationName, doc);
 }
 
+function getOwnerDocumentFromRootContainer(
+  rootContainerElement: Element | Document,
+): Document {
+  return rootContainerElement.nodeType === DOCUMENT_NODE
+    ? (rootContainerElement: any)
+    : rootContainerElement.ownerDocument;
+}
+
 // There are so many media events, it makes sense to just
 // maintain a list rather than create a `trapBubbledEvent` for each
 var mediaEvents = {
@@ -233,7 +239,7 @@ function setInitialDOMProperties(
     } else if (propKey === SUPPRESS_CONTENT_EDITABLE_WARNING) {
       // Noop
     } else if (registrationNameModules.hasOwnProperty(propKey)) {
-      if (nextProp) {
+      if (nextProp != null) {
         if (__DEV__ && typeof nextProp !== 'function') {
           warnForInvalidEventListener(propKey, nextProp);
         }
@@ -296,20 +302,17 @@ var ReactDOMFiberComponent = {
   ): Element {
     // We create tags in the namespace of their parent container, except HTML
     // tags get no namespace.
-    var ownerDocument: Document = rootContainerElement.nodeType ===
-      DOCUMENT_NODE
-      ? (rootContainerElement: any)
-      : rootContainerElement.ownerDocument;
+    var ownerDocument: Document = getOwnerDocumentFromRootContainer(
+      rootContainerElement,
+    );
     var domElement: Element;
     var namespaceURI = parentNamespace;
     if (namespaceURI === HTML_NAMESPACE) {
       namespaceURI = getIntrinsicNamespace(type);
     }
-    if (__DEV__) {
-      var isCustomComponentTag = isCustomComponent(type, props);
-    }
     if (namespaceURI === HTML_NAMESPACE) {
       if (__DEV__) {
+        var isCustomComponentTag = isCustomComponent(type, props);
         // Should this check be gated by parent namespace? Not sure we want to
         // allow <SVG> or <mATH>.
         warning(
@@ -328,7 +331,7 @@ var ReactDOMFiberComponent = {
         // This is guaranteed to yield a script element.
         var firstChild = ((div.firstChild: any): HTMLScriptElement);
         domElement = div.removeChild(firstChild);
-      } else if (props.is) {
+      } else if (typeof props.is === 'string') {
         // $FlowIssue `createElement` should be updated for Web Components
         domElement = ownerDocument.createElement(type, {is: props.is});
       } else {
@@ -362,6 +365,12 @@ var ReactDOMFiberComponent = {
     }
 
     return domElement;
+  },
+
+  createTextNode(text: string, rootContainerElement: Element | Document): Text {
+    return getOwnerDocumentFromRootContainer(
+      rootContainerElement,
+    ).createTextNode(text);
   },
 
   setInitialProperties(
@@ -707,7 +716,7 @@ var ReactDOMFiberComponent = {
       } else if (propKey === SUPPRESS_CONTENT_EDITABLE_WARNING) {
         // Noop
       } else if (registrationNameModules.hasOwnProperty(propKey)) {
-        if (nextProp) {
+        if (nextProp != null) {
           // We eagerly listen to this even though we haven't committed yet.
           if (__DEV__ && typeof nextProp !== 'function') {
             warnForInvalidEventListener(propKey, nextProp);
@@ -778,6 +787,7 @@ var ReactDOMFiberComponent = {
     domElement: Element,
     tag: string,
     rawProps: Object,
+    parentNamespace: string,
     rootContainerElement: Element | Document,
   ): null | Array<mixed> {
     if (__DEV__) {
@@ -914,6 +924,8 @@ var ReactDOMFiberComponent = {
           case 'selected':
             break;
           default:
+            // Intentionally use the original name.
+            // See discussion in https://github.com/facebook/react/pull/10676.
             extraAttributeNames.add(attributes[i].name);
         }
       }
@@ -951,7 +963,7 @@ var ReactDOMFiberComponent = {
           }
         }
       } else if (registrationNameModules.hasOwnProperty(propKey)) {
-        if (nextProp) {
+        if (nextProp != null) {
           if (__DEV__ && typeof nextProp !== 'function') {
             warnForInvalidEventListener(propKey, nextProp);
           }
@@ -1009,8 +1021,17 @@ var ReactDOMFiberComponent = {
               nextProp,
             );
           } else {
-            // $FlowFixMe - Should be inferred as not undefined.
-            extraAttributeNames.delete(propKey.toLowerCase());
+            let ownNamespace = parentNamespace;
+            if (ownNamespace === HTML_NAMESPACE) {
+              ownNamespace = getIntrinsicNamespace(tag);
+            }
+            if (ownNamespace === HTML_NAMESPACE) {
+              // $FlowFixMe - Should be inferred as not undefined.
+              extraAttributeNames.delete(propKey.toLowerCase());
+            } else {
+              // $FlowFixMe - Should be inferred as not undefined.
+              extraAttributeNames.delete(propKey);
+            }
             serverValue = DOMPropertyOperations.getValueForAttribute(
               domElement,
               propKey,

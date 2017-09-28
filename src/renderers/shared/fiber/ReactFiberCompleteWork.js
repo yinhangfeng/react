@@ -1,10 +1,8 @@
 /**
- * Copyright 2013-present, Facebook, Inc.
- * All rights reserved.
+ * Copyright (c) 2013-present, Facebook, Inc.
  *
- * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  *
  * @providesModule ReactFiberCompleteWork
  * @flow
@@ -21,7 +19,10 @@ import type {FiberRoot} from 'ReactFiberRoot';
 import type {HostConfig} from 'ReactFiberReconciler';
 
 var {reconcileChildFibers} = require('ReactChildFiber');
-var {popContextProvider} = require('ReactFiberContext');
+var {
+  popContextProvider,
+  popTopLevelContextObject,
+} = require('ReactFiberContext');
 var ReactTypeOfWork = require('ReactTypeOfWork');
 var ReactTypeOfSideEffect = require('ReactTypeOfSideEffect');
 var ReactPriorityLevel = require('ReactPriorityLevel');
@@ -50,7 +51,7 @@ var invariant = require('fbjs/lib/invariant');
 module.exports = function<T, P, I, TI, PI, C, CX, PL>(
   config: HostConfig<T, P, I, TI, PI, C, CX, PL>,
   hostContext: HostContext<C, CX>,
-  hydrationContext: HydrationContext<C>,
+  hydrationContext: HydrationContext<C, CX>,
 ) {
   const {
     createInstance,
@@ -211,7 +212,8 @@ module.exports = function<T, P, I, TI, PI, C, CX, PL>(
         return null;
       }
       case HostRoot: {
-        // TODO: Pop the host container after #8607 lands.
+        popHostContainer(workInProgress);
+        popTopLevelContextObject(workInProgress);
         const fiberRoot = (workInProgress.stateNode: FiberRoot);
         if (fiberRoot.pendingContext) {
           fiberRoot.context = fiberRoot.pendingContext;
@@ -279,12 +281,13 @@ module.exports = function<T, P, I, TI, PI, C, CX, PL>(
           // bottom->up. Top->down is faster in IE11.
           let wasHydrated = popHydrationState(workInProgress);
           if (wasHydrated) {
-            // TOOD: Move this and createInstance step into the beginPhase
+            // TODO: Move this and createInstance step into the beginPhase
             // to consolidate.
             if (
               prepareToHydrateHostInstance(
                 workInProgress,
                 rootContainerInstance,
+                currentHostContext,
               )
             ) {
               // If changes to the hydrated node needs to be applied at the

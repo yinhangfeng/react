@@ -1,10 +1,8 @@
 /**
- * Copyright 2013-present, Facebook, Inc.
- * All rights reserved.
+ * Copyright (c) 2013-present, Facebook, Inc.
  *
- * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  *
  * @providesModule ReactFiberContext
  * @flow
@@ -135,6 +133,11 @@ function popContextProvider(fiber: Fiber): void {
 }
 exports.popContextProvider = popContextProvider;
 
+exports.popTopLevelContextObject = function(fiber: Fiber) {
+  pop(didPerformWorkStackCursor, fiber);
+  pop(contextStackCursor, fiber);
+};
+
 exports.pushTopLevelContextObject = function(
   fiber: Fiber,
   context: Object,
@@ -234,7 +237,7 @@ exports.pushContextProvider = function(workInProgress: Fiber): boolean {
     emptyObject;
 
   // Remember the parent context so we can merge with it later.
-  // Inherit the parent's did-perform-work value to avoid inadvertantly blocking updates.
+  // Inherit the parent's did-perform-work value to avoid inadvertently blocking updates.
   previousContext = contextStackCursor.current;
   push(contextStackCursor, memoizedMergedChildContext, workInProgress);
   push(

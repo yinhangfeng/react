@@ -1,10 +1,8 @@
 /**
- * Copyright 2013-present, Facebook, Inc.
- * All rights reserved.
+ * Copyright (c) 2013-present, Facebook, Inc.
  *
- * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  *
  * @providesModule ReactDOMInvalidARIAHook
  */
@@ -12,6 +10,7 @@
 'use strict';
 
 var DOMProperty = require('DOMProperty');
+var isCustomComponent = require('isCustomComponent');
 
 var warnedProperties = {};
 var rARIA = new RegExp('^(aria)-[' + DOMProperty.ATTRIBUTE_NAME_CHAR + ']*$');
@@ -145,7 +144,7 @@ function warnInvalidARIAProps(type, props, debugID) {
 }
 
 function validateProperties(type, props, debugID /* Stack only */) {
-  if (type.indexOf('-') >= 0 || props.is) {
+  if (isCustomComponent(type, props)) {
     return;
   }
   warnInvalidARIAProps(type, props, debugID);

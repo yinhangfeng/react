@@ -1,10 +1,8 @@
 /**
- * Copyright 2013-present, Facebook, Inc.
- * All rights reserved.
+ * Copyright (c) 2013-present, Facebook, Inc.
  *
- * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  *
  * @providesModule ReactFiberReconciler
  * @flow
@@ -14,7 +12,6 @@
 
 import type {Fiber} from 'ReactFiber';
 import type {FiberRoot} from 'ReactFiberRoot';
-import type {PriorityLevel} from 'ReactPriorityLevel';
 import type {ReactNodeList} from 'ReactTypes';
 
 var ReactFeatureFlags = require('ReactFeatureFlags');
@@ -134,6 +131,7 @@ export type HostConfig<T, P, I, TI, PI, C, CX, PL> = {
     type: T,
     props: P,
     rootContainerInstance: C,
+    hostContext: CX,
     internalInstanceHandle: OpaqueHandle,
   ) => null | PL,
   hydrateTextInstance?: (
@@ -160,10 +158,9 @@ export type Reconciler<C, I, TI> = {
   updateContainer(
     element: ReactNodeList,
     container: OpaqueRoot,
-    parentComponent: ?ReactComponent<any, any, any>,
+    parentComponent: ?React$Component<any, any>,
     callback: ?Function,
   ): void,
-  performWithPriority(priorityLevel: PriorityLevel, fn: Function): void,
   batchedUpdates<A>(fn: () => A): A,
   unbatchedUpdates<A>(fn: () => A): A,
   flushSync<A>(fn: () => A): A,
@@ -172,7 +169,7 @@ export type Reconciler<C, I, TI> = {
   // Used to extract the return value from the initial render. Legacy API.
   getPublicRootInstance(
     container: OpaqueRoot,
-  ): ReactComponent<any, any, any> | TI | I | null,
+  ): React$Component<any, any> | TI | I | null,
 
   // Use for findDOMNode/findHostNode. Legacy API.
   findHostInstance(component: Fiber): I | TI | null,
@@ -196,7 +193,6 @@ module.exports = function<T, P, I, TI, PI, C, CX, PL>(
   var {
     scheduleUpdate,
     getPriorityContext,
-    performWithPriority,
     batchedUpdates,
     unbatchedUpdates,
     flushSync,
@@ -256,7 +252,7 @@ module.exports = function<T, P, I, TI, PI, C, CX, PL>(
     updateContainer(
       element: ReactNodeList,
       container: OpaqueRoot,
-      parentComponent: ?ReactComponent<any, any, any>,
+      parentComponent: ?React$Component<any, any>,
       callback: ?Function,
     ): void {
       // TODO: If this is a nested container, this won't be the root.
@@ -284,8 +280,6 @@ module.exports = function<T, P, I, TI, PI, C, CX, PL>(
       scheduleTopLevelUpdate(current, element, callback);
     },
 
-    performWithPriority,
-
     batchedUpdates,
 
     unbatchedUpdates,
@@ -296,7 +290,7 @@ module.exports = function<T, P, I, TI, PI, C, CX, PL>(
 
     getPublicRootInstance(
       container: OpaqueRoot,
-    ): ReactComponent<any, any, any> | PI | null {
+    ): React$Component<any, any> | PI | null {
       const containerFiber = container.current;
       if (!containerFiber.child) {
         return null;

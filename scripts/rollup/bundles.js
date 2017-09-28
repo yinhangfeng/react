@@ -263,6 +263,7 @@ const bundles = [
     externals: [
       'ExceptionsManager',
       'InitializeCore',
+      'Platform',
       'RCTEventEmitter',
       'TextInputState',
       'UIManager',
@@ -367,6 +368,24 @@ const bundles = [
     ],
   },
 ];
+
+// Based on deep-freeze by substack (public domain)
+function deepFreeze(o) {
+  Object.freeze(o);
+  Object.getOwnPropertyNames(o).forEach(function(prop) {
+    if (
+      o[prop] !== null &&
+      (typeof o[prop] === 'object' || typeof o[prop] === 'function') &&
+      !Object.isFrozen(o[prop])
+    ) {
+      deepFreeze(o[prop]);
+    }
+  });
+  return o;
+}
+
+// Don't accidentally mutate config as part of the build
+deepFreeze(bundles);
 
 module.exports = {
   bundleTypes,

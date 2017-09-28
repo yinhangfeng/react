@@ -1,10 +1,8 @@
 /**
- * Copyright 2013-present, Facebook, Inc.
- * All rights reserved.
+ * Copyright (c) 2013-present, Facebook, Inc.
  *
- * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  *
  * @emails react-core
  */
@@ -16,13 +14,11 @@ jest.mock('isEventSupported');
 describe('EventPluginHub', () => {
   var React;
   var ReactTestUtils;
-  var ReactDOMFeatureFlags;
 
   beforeEach(() => {
     jest.resetModules();
     React = require('react');
     ReactTestUtils = require('react-dom/test-utils');
-    ReactDOMFeatureFlags = require('ReactDOMFeatureFlags');
   });
 
   it('should prevent non-function listeners, at dispatch', () => {
@@ -35,14 +31,10 @@ describe('EventPluginHub', () => {
     }).toThrowError(
       'Expected `onClick` listener to be a function, instead got a value of `string` type.',
     );
-    if (ReactDOMFeatureFlags.useFiber) {
-      expectDev(console.error.calls.count()).toBe(1);
-      expectDev(console.error.calls.argsFor(0)[0]).toContain(
-        'Expected `onClick` listener to be a function, instead got a value of `string` type.',
-      );
-    } else {
-      expectDev(console.error.calls.count()).toBe(0);
-    }
+    expectDev(console.error.calls.count()).toBe(1);
+    expectDev(console.error.calls.argsFor(0)[0]).toContain(
+      'Expected `onClick` listener to be a function, instead got a value of `string` type.',
+    );
   });
 
   it('should not prevent null listeners, at dispatch', () => {

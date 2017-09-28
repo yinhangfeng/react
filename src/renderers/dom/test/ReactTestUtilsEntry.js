@@ -1,10 +1,8 @@
 /**
- * Copyright 2013-present, Facebook, Inc.
- * All rights reserved.
+ * Copyright (c) 2013-present, Facebook, Inc.
  *
- * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  *
  * @providesModule ReactTestUtilsEntry
  */
@@ -16,15 +14,10 @@ var React = require('react');
 var ReactDOM = require('react-dom');
 var ReactFiberTreeReflection = require('ReactFiberTreeReflection');
 var ReactInstanceMap = require('ReactInstanceMap');
-var ReactShallowRenderer = require('ReactShallowRendererEntry'); // TODO (bvaughn) Remove this import before 16.0.0
 var ReactTypeOfWork = require('ReactTypeOfWork');
 var SyntheticEvent = require('SyntheticEvent');
 
 var invariant = require('fbjs/lib/invariant');
-
-if (__DEV__) {
-  var warning = require('fbjs/lib/warning');
-}
 
 var {findDOMNode} = ReactDOM;
 var {
@@ -43,20 +36,6 @@ var {
   HostComponent,
   HostText,
 } = ReactTypeOfWork;
-
-// TODO (bvaughn) Remove this warning before 16.0.0
-// It's only being added for temporary deprecation notice in RN.
-let warnedAboutShallowRenderer = false;
-function createRendererWithWarning() {
-  warning(
-    warnedAboutShallowRenderer,
-    'Shallow renderer has been moved to react-test-renderer/shallow. ' +
-      'Update references to remove this warning. ' +
-      'TestUtils.createRenderer will be removed completely in React 16.',
-  );
-  warnedAboutShallowRenderer = true;
-  return new ReactShallowRenderer();
-}
 
 function Event(suffix) {}
 
@@ -195,38 +174,6 @@ var ReactTestUtils = {
       : internalInstance._currentElement.type; // Stack reconciler
 
     return constructor === type;
-  },
-
-  // TODO: deprecate? It's undocumented and unused.
-  isCompositeComponentElement: function(inst) {
-    if (!React.isValidElement(inst)) {
-      return false;
-    }
-    // We check the prototype of the type that will get mounted, not the
-    // instance itself. This is a future proof way of duck typing.
-    var prototype = inst.type.prototype;
-    return (
-      typeof prototype.render === 'function' &&
-      typeof prototype.setState === 'function'
-    );
-  },
-
-  // TODO: deprecate? It's undocumented and unused.
-  isCompositeComponentElementWithType: function(inst, type) {
-    var internalInstance = ReactInstanceMap.get(inst);
-    var constructor = internalInstance._currentElement.type;
-
-    return !!(ReactTestUtils.isCompositeComponentElement(inst) &&
-      constructor === type);
-  },
-
-  // TODO: deprecate? It's undocumented and unused.
-  getRenderedChildOfCompositeComponent: function(inst) {
-    if (!ReactTestUtils.isCompositeComponent(inst)) {
-      return null;
-    }
-    var internalInstance = ReactInstanceMap.get(inst);
-    return internalInstance._renderedComponent.getPublicInstance();
   },
 
   findAllInRenderedTree: function(inst, test) {
@@ -425,10 +372,6 @@ var ReactTestUtils = {
       touches: [{pageX: x, pageY: y}],
     };
   },
-
-  // TODO (bvaughn) Remove this warning accessor before 16.0.0.
-  // It's only being added for temporary deprecation notice in RN.
-  createRenderer: createRendererWithWarning,
 
   Simulate: null,
   SimulateNative: {},

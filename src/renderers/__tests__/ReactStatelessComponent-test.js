@@ -1,10 +1,8 @@
 /**
- * Copyright 2013-present, Facebook, Inc.
- * All rights reserved.
+ * Copyright (c) 2013-present, Facebook, Inc.
  *
- * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  *
  * @emails react-core
  */
@@ -15,8 +13,6 @@ var PropTypes;
 var React;
 var ReactDOM;
 var ReactTestUtils;
-
-var ReactDOMFeatureFlags = require('ReactDOMFeatureFlags');
 
 function StatelessComponent(props) {
   return <div>{props.name}</div>;
@@ -120,50 +116,20 @@ describe('ReactStatelessComponent', () => {
 
     ReactDOM.render(<StatelessComponentWithChildContext name="A" />, container);
 
-    // Stack and Fiber differ in terms of they show warnings
-    if (ReactDOMFeatureFlags.useFiber) {
-      expectDev(console.error.calls.count()).toBe(1);
-      expectDev(console.error.calls.argsFor(0)[0]).toContain(
-        'StatelessComponentWithChildContext(...): childContextTypes cannot ' +
-          'be defined on a functional component.',
-      );
-    } else {
-      expectDev(console.error.calls.count()).toBe(2);
-      expectDev(console.error.calls.argsFor(0)[0]).toContain(
-        'StatelessComponentWithChildContext(...): childContextTypes cannot ' +
-          'be defined on a functional component.',
-      );
-      expectDev(normalizeCodeLocInfo(console.error.calls.argsFor(1)[0])).toBe(
-        'Warning: StatelessComponentWithChildContext.childContextTypes is specified ' +
-          'but there is no getChildContext() method on the instance. You can either ' +
-          'define getChildContext() on StatelessComponentWithChildContext or remove ' +
-          'childContextTypes from it.',
-      );
-    }
+    expectDev(console.error.calls.count()).toBe(1);
+    expectDev(console.error.calls.argsFor(0)[0]).toContain(
+      'StatelessComponentWithChildContext(...): childContextTypes cannot ' +
+        'be defined on a functional component.',
+    );
   });
-
-  if (!ReactDOMFeatureFlags.useFiber) {
-    // Stack doesn't support fragments
-    it('should throw when stateless component returns array', () => {
-      function NotAComponent() {
-        return [<div />, <div />];
-      }
-      expect(function() {
-        ReactTestUtils.renderIntoDocument(<div><NotAComponent /></div>);
-      }).toThrowError(
-        'NotAComponent(...): A valid React element (or null) must be returned. ' +
-          'You may have returned undefined, an array or some other invalid object.',
-      );
-    });
-  }
 
   it('should throw when stateless component returns undefined', () => {
     function NotAComponent() {}
     expect(function() {
       ReactTestUtils.renderIntoDocument(<div><NotAComponent /></div>);
     }).toThrowError(
-      'NotAComponent(...): A valid React element (or null) must be returned. ' +
-        'You may have returned undefined, an array or some other invalid object.',
+      'NotAComponent(...): Nothing was returned from render. ' +
+        'This usually means a return statement is missing. Or, to render nothing, return null.',
     );
   });
 

@@ -1,22 +1,17 @@
 /**
- * Copyright 2013-present, Facebook, Inc.
- * All rights reserved.
+ * Copyright (c) 2013-present, Facebook, Inc.
  *
- * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  *
  * @emails react-core
  */
 
 'use strict';
 
-var ReactDOMFeatureFlags = require('ReactDOMFeatureFlags');
-var describeStack = ReactDOMFeatureFlags.useFiber ? describe.skip : describe;
-
 // ReactPerf is currently not supported on Fiber.
 // Use browser timeline integration instead.
-describeStack('ReactPerf', () => {
+describe.skip('ReactPerf', () => {
   var React;
   var ReactDOM;
   var ReactPerf;

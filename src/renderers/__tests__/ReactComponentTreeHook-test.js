@@ -1,23 +1,17 @@
 /**
- * Copyright 2016-present, Facebook, Inc.
- * All rights reserved.
+ * Copyright (c) 2016-present, Facebook, Inc.
  *
- * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  *
  * @emails react-core
  */
 
 'use strict';
 
-var ReactDOMFeatureFlags = require('ReactDOMFeatureFlags');
-var describeStack = ReactDOMFeatureFlags.useFiber ? describe.skip : describe;
-
-describe('ReactComponentTreeHook', () => {
+describe.skip('ReactComponentTreeHook', () => {
   var React;
   var ReactDOM;
-  var ReactDOMServer;
   var ReactInstanceMap;
   var ReactComponentTreeHook;
   var ReactDebugCurrentFiber;
@@ -28,7 +22,6 @@ describe('ReactComponentTreeHook', () => {
 
     React = require('react');
     ReactDOM = require('react-dom');
-    ReactDOMServer = require('react-dom/server');
     ReactInstanceMap = require('ReactInstanceMap');
     ReactDebugCurrentFiber = require('ReactDebugCurrentFiber');
     ReactComponentTreeHook = require('ReactComponentTreeHook');
@@ -39,9 +32,8 @@ describe('ReactComponentTreeHook', () => {
   describe('stack addenda', () => {
     it('gets created', () => {
       function getAddendum(element) {
-        var addendum = ReactDOMFeatureFlags.useFiber
-          ? ReactDebugCurrentFiber.getCurrentFiberStackAddendum() || ''
-          : ReactComponentTreeHook.getCurrentStackAddendum();
+        var addendum =
+          ReactDebugCurrentFiber.getCurrentFiberStackAddendum() || '';
         return addendum.replace(/\(at .+?:\d+\)/g, '(at **)');
       }
 
@@ -109,68 +101,6 @@ describe('ReactComponentTreeHook', () => {
       // Make sure owner is fetched for the top element too.
       // expectDev(getAddendum(rOwnedByQ)).toBe('\n    in R (created by Q)');
     });
-
-    // These are features and regression tests that only affect
-    // the Stack implementation of the stack addendum.
-    if (!ReactDOMFeatureFlags.useFiber) {
-      it('can be retrieved by ID', () => {
-        function getAddendum(id) {
-          var addendum = ReactComponentTreeHook.getStackAddendumByID(id);
-          return addendum.replace(/\(at .+?:\d+\)/g, '(at **)');
-        }
-
-        class Q extends React.Component {
-          render() {
-            return null;
-          }
-        }
-
-        var q = ReactDOM.render(<Q />, document.createElement('div'));
-        expectDev(getAddendum(ReactInstanceMap.get(q)._debugID)).toBe(
-          '\n    in Q (at **)',
-        );
-
-        spyOn(console, 'error');
-        getAddendum(-17);
-        expectDev(console.error.calls.count()).toBe(1);
-        expectDev(console.error.calls.argsFor(0)[0]).toBe(
-          'Warning: ReactComponentTreeHook: Missing React element for ' +
-            'debugID -17 when building stack',
-        );
-      });
-
-      it('is created during mounting', () => {
-        // https://github.com/facebook/react/issues/7187
-        var el = document.createElement('div');
-        var portalEl = document.createElement('div');
-        class Foo extends React.Component {
-          componentWillMount() {
-            ReactDOM.render(<div />, portalEl);
-          }
-          render() {
-            return <div><div /></div>;
-          }
-        }
-        ReactDOM.render(<Foo />, el);
-      });
-
-      it('is created when calling renderToString during render', () => {
-        // https://github.com/facebook/react/issues/7190
-        var el = document.createElement('div');
-        class Foo extends React.Component {
-          render() {
-            return (
-              <div>
-                <div>
-                  {ReactDOMServer.renderToString(<div />)}
-                </div>
-              </div>
-            );
-          }
-        }
-        ReactDOM.render(<Foo />, el);
-      });
-    }
   });
 
   // The rest of this file is not relevant for Fiber.
@@ -229,7 +159,7 @@ describe('ReactComponentTreeHook', () => {
     expectWrapperTreeToEqual(null);
   }
 
-  describeStack('mount', () => {
+  describe('mount', () => {
     it('uses displayName or Unknown for classic components', () => {
       class Foo extends React.Component {
         render() {
@@ -701,7 +631,7 @@ describe('ReactComponentTreeHook', () => {
     });
   });
 
-  describeStack('update', () => {
+  describe('update', () => {
     describe('host component', () => {
       it('updates text of a single text child', () => {
         var elementBefore = <div>Hi.</div>;
@@ -1921,7 +1851,7 @@ describe('ReactComponentTreeHook', () => {
     });
   });
 
-  describeStack('misc', () => {
+  describe('misc', () => {
     it('tracks owner correctly', () => {
       class Foo extends React.Component {
         render() {
@@ -2091,7 +2021,7 @@ describe('ReactComponentTreeHook', () => {
     });
   });
 
-  describeStack('in environment without Map, Set and Array.from', () => {
+  describe('in environment without Map, Set and Array.from', () => {
     var realMap;
     var realSet;
     var realArrayFrom;
@@ -2109,7 +2039,6 @@ describe('ReactComponentTreeHook', () => {
 
       React = require('react');
       ReactDOM = require('react-dom');
-      ReactDOMServer = require('react-dom/server');
       ReactInstanceMap = require('ReactInstanceMap');
       ReactComponentTreeHook = require('ReactComponentTreeHook');
       ReactComponentTreeTestUtils = require('ReactComponentTreeTestUtils');

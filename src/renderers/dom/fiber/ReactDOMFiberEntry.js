@@ -1,10 +1,8 @@
 /**
- * Copyright 2013-present, Facebook, Inc.
- * All rights reserved.
+ * Copyright (c) 2013-present, Facebook, Inc.
  *
- * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  *
  * @providesModule ReactDOMFiberEntry
  * @flow
@@ -21,7 +19,6 @@ var ExecutionEnvironment = require('fbjs/lib/ExecutionEnvironment');
 var ReactBrowserEventEmitter = require('ReactBrowserEventEmitter');
 var ReactControlledComponent = require('ReactControlledComponent');
 var ReactDOMComponentTree = require('ReactDOMComponentTree');
-var ReactFeatureFlags = require('ReactFeatureFlags');
 var ReactDOMFeatureFlags = require('ReactDOMFeatureFlags');
 var ReactDOMFiberComponent = require('ReactDOMFiberComponent');
 var ReactDOMFrameScheduling = require('ReactDOMFrameScheduling');
@@ -31,7 +28,6 @@ var ReactInputSelection = require('ReactInputSelection');
 var ReactInstanceMap = require('ReactInstanceMap');
 var ReactPortal = require('ReactPortal');
 var ReactVersion = require('ReactVersion');
-var {isValidElement} = require('react');
 var {injectInternals} = require('ReactFiberDevToolsHook');
 var {
   ELEMENT_NODE,
@@ -48,6 +44,7 @@ var invariant = require('fbjs/lib/invariant');
 var {getChildNamespace} = DOMNamespaces;
 var {
   createElement,
+  createTextNode,
   setInitialProperties,
   diffProperties,
   updateProperties,
@@ -370,7 +367,7 @@ var DOMRenderer = ReactFiberReconciler({
       const hostContextDev = ((hostContext: any): HostContextDev);
       validateDOMNesting(null, text, null, hostContextDev.ancestorInfo);
     }
-    var textNode: TextInstance = document.createTextNode(text);
+    var textNode: TextInstance = createTextNode(text, rootContainerInstance);
     precacheFiberNode(internalInstanceHandle, textNode);
     return textNode;
   },
@@ -490,13 +487,27 @@ var DOMRenderer = ReactFiberReconciler({
     type: string,
     props: Props,
     rootContainerInstance: Container,
+    hostContext: HostContext,
     internalInstanceHandle: Object,
   ): null | Array<mixed> {
     precacheFiberNode(internalInstanceHandle, instance);
     // TODO: Possibly defer this until the commit phase where all the events
     // get attached.
     updateFiberProps(instance, props);
-    return diffHydratedProperties(instance, type, props, rootContainerInstance);
+    let parentNamespace: string;
+    if (__DEV__) {
+      const hostContextDev = ((hostContext: any): HostContextDev);
+      parentNamespace = hostContextDev.namespace;
+    } else {
+      parentNamespace = ((hostContext: any): HostContextProd);
+    }
+    return diffHydratedProperties(
+      instance,
+      type,
+      props,
+      parentNamespace,
+      rootContainerInstance,
+    );
   },
 
   hydrateTextInstance(
@@ -546,7 +557,7 @@ ReactGenericBatching.injection.injectFiberBatchedUpdates(
 var warnedAboutHydrateAPI = false;
 
 function renderSubtreeIntoContainer(
-  parentComponent: ?ReactComponent<any, any, any>,
+  parentComponent: ?React$Component<any, any>,
   children: ReactNodeList,
   container: DOMContainer,
   forceHydrate: boolean,
@@ -648,53 +659,32 @@ function renderSubtreeIntoContainer(
   return DOMRenderer.getPublicRootInstance(root);
 }
 
+function createPortal(
+  children: ReactNodeList,
+  container: DOMContainer,
+  key: ?string = null,
+) {
+  invariant(
+    isValidContainer(container),
+    'Target container is not a DOM element.',
+  );
+  // TODO: pass ReactDOM portal implementation as third argument
+  return ReactPortal.createPortal(children, container, null, key);
+}
+
 var ReactDOMFiber = {
-  hydrate(
-    element: ReactElement<any>,
-    container: DOMContainer,
-    callback: ?Function,
-  ) {
+  createPortal,
+
+  hydrate(element: React$Node, container: DOMContainer, callback: ?Function) {
     // TODO: throw or warn if we couldn't hydrate?
     return renderSubtreeIntoContainer(null, element, container, true, callback);
   },
 
   render(
-    element: ReactElement<any>,
+    element: React$Element<any>,
     container: DOMContainer,
     callback: ?Function,
   ) {
-    if (ReactFeatureFlags.disableNewFiberFeatures) {
-      // Top-level check occurs here instead of inside child reconciler
-      // because requirements vary between renderers. E.g. React Art
-      // allows arrays.
-      if (!isValidElement(element)) {
-        if (typeof element === 'string') {
-          invariant(
-            false,
-            'ReactDOM.render(): Invalid component element. Instead of ' +
-              "passing a string like 'div', pass " +
-              "React.createElement('div') or <div />.",
-          );
-        } else if (typeof element === 'function') {
-          invariant(
-            false,
-            'ReactDOM.render(): Invalid component element. Instead of ' +
-              'passing a class like Foo, pass React.createElement(Foo) ' +
-              'or <Foo />.',
-          );
-        } else if (element != null && typeof element.props !== 'undefined') {
-          // Check if it quacks like an element
-          invariant(
-            false,
-            'ReactDOM.render(): Invalid component element. This may be ' +
-              'caused by unintentionally loading two independent copies ' +
-              'of React.',
-          );
-        } else {
-          invariant(false, 'ReactDOM.render(): Invalid component element.');
-        }
-      }
-    }
     return renderSubtreeIntoContainer(
       null,
       element,
@@ -705,8 +695,8 @@ var ReactDOMFiber = {
   },
 
   unstable_renderSubtreeIntoContainer(
-    parentComponent: ReactComponent<any, any, any>,
-    element: ReactElement<any>,
+    parentComponent: React$Component<any, any>,
+    element: React$Element<any>,
     containerNode: DOMContainer,
     callback: ?Function,
   ) {
@@ -780,14 +770,9 @@ var ReactDOMFiber = {
 
   findDOMNode: findDOMNode,
 
-  unstable_createPortal(
-    children: ReactNodeList,
-    container: DOMContainer,
-    key: ?string = null,
-  ) {
-    // TODO: pass ReactDOM portal implementation as third argument
-    return ReactPortal.createPortal(children, container, null, key);
-  },
+  // Temporary alias since we already shipped React 16 RC with it.
+  // TODO: remove in React 17.
+  unstable_createPortal: createPortal,
 
   unstable_batchedUpdates: ReactGenericBatching.batchedUpdates,
 

@@ -59,7 +59,25 @@ October 25–27, Bratislava, Slovakia
 
 [Website](https://reactiveconf.com)
 
+### React Seoul 2017
+November 4 in Seoul, South Korea
 
+[Website](http://seoul.reactjs.kr/en)
+
+### React Day Berlin
+December 2, Berlin, Germany
+
+[Website](https://reactday.berlin) - [Twitter](https://twitter.com/reactdayberlin) - [Facebook](https://www.facebook.com/reactdayberlin/)
+
+### AgentConf 2018
+January 25-28 in Dornbirn, Austria
+
+[Website](http://agent.sh/)
+
+### React Amsterdam 2018
+April 13 in Amsterdam, The Netherlands
+
+[Website](https://react.amsterdam) - [Twitter](https://twitter.com/reactamsterdam) - [Facebook](https://www.facebook.com/reactamsterdam)
 
 ## Past Conferences
 

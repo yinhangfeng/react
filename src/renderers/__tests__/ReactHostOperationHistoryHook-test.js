@@ -1,22 +1,17 @@
 /**
- * Copyright 2016-present, Facebook, Inc.
- * All rights reserved.
+ * Copyright (c) 2016-present, Facebook, Inc.
  *
- * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  *
  * @emails react-core
  */
 
 'use strict';
 
-var ReactDOMFeatureFlags = require('ReactDOMFeatureFlags');
-var describeStack = ReactDOMFeatureFlags.useFiber ? describe.skip : describe;
-
 // This is only used by ReactPerf which is currently not supported on Fiber.
 // Use browser timeline integration instead.
-describeStack('ReactHostOperationHistoryHook', () => {
+describe.skip('ReactHostOperationHistoryHook', () => {
   var React;
   var ReactPerf;
   var ReactDOM;

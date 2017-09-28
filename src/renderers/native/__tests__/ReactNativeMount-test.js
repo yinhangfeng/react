@@ -1,10 +1,8 @@
 /**
- * Copyright 2013-2015, Facebook, Inc.
- * All rights reserved.
+ * Copyright (c) 2013-present, Facebook, Inc.
  *
- * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  *
  * @emails react-core
  */
@@ -27,10 +25,10 @@ describe('ReactNative', () => {
   });
 
   it('should be able to create and render a native component', () => {
-    var View = createReactNativeComponentClass({
+    var View = createReactNativeComponentClass('View', () => ({
       validAttributes: {foo: true},
       uiViewClassName: 'View',
-    });
+    }));
 
     ReactNative.render(<View foo="test" />, 1);
     expect(UIManager.createView).toBeCalled();
@@ -40,10 +38,10 @@ describe('ReactNative', () => {
   });
 
   it('should be able to create and update a native component', () => {
-    var View = createReactNativeComponentClass({
+    var View = createReactNativeComponentClass('View', () => ({
       validAttributes: {foo: true},
       uiViewClassName: 'View',
-    });
+    }));
 
     ReactNative.render(<View foo="foo" />, 11);
 
@@ -61,10 +59,10 @@ describe('ReactNative', () => {
   });
 
   it('should not call UIManager.updateView after render for properties that have not changed', () => {
-    const Text = createReactNativeComponentClass({
+    const Text = createReactNativeComponentClass('Text', () => ({
       validAttributes: {foo: true},
       uiViewClassName: 'Text',
-    });
+    }));
 
     ReactNative.render(<Text foo="a">1</Text>, 11);
     expect(UIManager.updateView).not.toBeCalled();
@@ -87,10 +85,10 @@ describe('ReactNative', () => {
   });
 
   it('should not call UIManager.updateView from setNativeProps for properties that have not changed', () => {
-    const View = createReactNativeComponentClass({
+    const View = createReactNativeComponentClass('View', () => ({
       validAttributes: {foo: true},
       uiViewClassName: 'View',
-    });
+    }));
 
     class Subclass extends ReactNative.NativeComponent {
       render() {
@@ -122,10 +120,10 @@ describe('ReactNative', () => {
   });
 
   it('returns the correct instance and calls it in the callback', () => {
-    var View = createReactNativeComponentClass({
+    var View = createReactNativeComponentClass('View', () => ({
       validAttributes: {foo: true},
       uiViewClassName: 'View',
-    });
+    }));
 
     var a;
     var b;
@@ -143,10 +141,10 @@ describe('ReactNative', () => {
   });
 
   it('renders and reorders children', () => {
-    var View = createReactNativeComponentClass({
+    var View = createReactNativeComponentClass('View', () => ({
       validAttributes: {title: true},
       uiViewClassName: 'View',
-    });
+    }));
 
     class Component extends React.Component {
       render() {

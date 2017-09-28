@@ -91,15 +91,39 @@ render()
 
 The `render()` method is required.
 
-When called, it should examine `this.props` and `this.state` and return a single React element. This element can be either a representation of a native DOM component, such as `<div />`, or another composite component that you've defined yourself.
+When called, it should examine `this.props` and `this.state` and return one of the following types:
 
-You can also return `null` or `false` to indicate that you don't want anything rendered. When returning `null` or `false`, `ReactDOM.findDOMNode(this)` will return `null`.
+- **React elements.** Typically created via JSX. A element can either be a representation of a native DOM component (`<div />`), or a user-defined composite component (`<MyComponent />`).
+- **String and numbers.** These are rendered as text nodes in the DOM.
+- **Portals**. Created with [`ReactDOM.createPortal`](/react/docs/portals.html).
+- `null`. Renders nothing.
+- **Booleans**. Render nothing. (Mostly exists to support `return test && <Child />` pattern, where `test` is boolean.)
+
+When returning `null` or `false`, `ReactDOM.findDOMNode(this)` will return `null`.
 
 The `render()` function should be pure, meaning that it does not modify component state, it returns the same result each time it's invoked, and it does not directly interact with the browser. If you need to interact with the browser, perform your work in `componentDidMount()` or the other lifecycle methods instead. Keeping `render()` pure makes components easier to think about.
 
 > Note
 >
 > `render()` will not be invoked if [`shouldComponentUpdate()`](#shouldcomponentupdate) returns false.
+
+#### Fragments
+
+You can also return multiple items from `render()` using an array:
+
+```javascript
+render() {
+  return [
+    <li key="A">First item</li>,
+    <li key="B">Second item</li>,
+    <li key="C">Third item</li>,
+  ];
+}
+```
+
+> Note:
+>
+> Don't forget to [add keys](https://facebook.github.io/react/docs/lists-and-keys.html#keys) to elements in a fragment to avoid the key warning.
 
 * * *
 
@@ -343,7 +367,7 @@ If `props.color` is set to null, it will remain null:
 
 ### `displayName`
 
-The `displayName` string is used in debugging messages. JSX sets this value automatically; see [JSX in Depth](/react/docs/jsx-in-depth.html).
+The `displayName` string is used in debugging messages. Usually, you don't need to set it explicitly because it's inferred from the name of the function or class that defines the component. You might want to set it explicitly if you want to display a different name for debugging purposes or when you create a higher-order component, see [Wrap the Display Name for Easy Debugging](/react/docs/higher-order-components.html#convention-wrap-the-display-name-for-easy-debugging) for details.
 
 * * *
 
