@@ -24,14 +24,17 @@ var SyntheticUIEvent = require('SyntheticUIEvent');
 var SyntheticWheelEvent = require('SyntheticWheelEvent');
 
 var getEventCharCode = require('getEventCharCode');
-var warning = require('fbjs/lib/warning');
+
+if (__DEV__) {
+  var warning = require('fbjs/lib/warning');
+}
 
 import type {TopLevelTypes} from 'BrowserEventConstants';
 import type {
   DispatchConfig,
   ReactSyntheticEvent,
 } from 'ReactSyntheticEventType';
-import type {ReactInstance} from 'ReactInstanceType';
+import type {Fiber} from 'ReactFiber';
 import type {EventTypes, PluginModule} from 'PluginModuleType';
 
 /**
@@ -176,7 +179,7 @@ var SimpleEventPlugin: PluginModule<MouseEvent> = {
 
   extractEvents: function(
     topLevelType: TopLevelTypes,
-    targetInst: ReactInstance,
+    targetInst: Fiber,
     nativeEvent: MouseEvent,
     nativeEventTarget: EventTarget,
   ): null | ReactSyntheticEvent {

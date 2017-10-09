@@ -10,7 +10,6 @@
 
 'use strict';
 
-import type {Fiber} from 'ReactFiber';
 import type {ReactNodeList} from 'ReactTypes';
 
 require('checkReact');
@@ -28,6 +27,7 @@ var ReactInputSelection = require('ReactInputSelection');
 var ReactInstanceMap = require('ReactInstanceMap');
 var ReactPortal = require('ReactPortal');
 var ReactVersion = require('ReactVersion');
+var {ReactCurrentOwner} = require('ReactGlobalSharedState');
 var {injectInternals} = require('ReactFiberDevToolsHook');
 var {
   ELEMENT_NODE,
@@ -38,7 +38,7 @@ var {
 } = require('HTMLNodeType');
 var {ROOT_ATTRIBUTE_NAME} = require('DOMProperty');
 
-var findDOMNode = require('findDOMNode');
+var getComponentName = require('getComponentName');
 var invariant = require('fbjs/lib/invariant');
 
 var {getChildNamespace} = DOMNamespaces;
@@ -50,6 +50,7 @@ var {
   updateProperties,
   diffHydratedProperties,
   diffHydratedText,
+  warnForUnmatchedText,
   warnForDeletedHydratableElement,
   warnForDeletedHydratableText,
   warnForInsertedHydratedElement,
@@ -58,6 +59,7 @@ var {
 var {precacheFiberNode, updateFiberProps} = ReactDOMComponentTree;
 
 if (__DEV__) {
+  var SUPPRESS_HYDRATION_WARNING = 'suppressHydrationWarning';
   var lowPriorityWarning = require('lowPriorityWarning');
   var warning = require('fbjs/lib/warning');
   var validateDOMNesting = require('validateDOMNesting');
@@ -85,9 +87,6 @@ require('ReactDOMInjection');
 ReactControlledComponent.injection.injectFiberControlledHostComponent(
   ReactDOMFiberComponent,
 );
-findDOMNode._injectFiber(function(fiber: Fiber) {
-  return DOMRenderer.findHostInstance(fiber);
-});
 
 type DOMContainer =
   | (Element & {
@@ -102,6 +101,7 @@ type Props = {
   autoFocus?: boolean,
   children?: mixed,
   hidden?: boolean,
+  suppressHydrationWarning?: boolean,
 };
 type Instance = Element;
 type TextInstance = Text;
@@ -166,17 +166,24 @@ var DOMRenderer = ReactFiberReconciler({
   getRootHostContext(rootContainerInstance: Container): HostContext {
     let type;
     let namespace;
-    if (rootContainerInstance.nodeType === DOCUMENT_NODE) {
-      type = '#document';
-      let root = (rootContainerInstance: any).documentElement;
-      namespace = root ? root.namespaceURI : getChildNamespace(null, '');
-    } else {
-      const container: any = rootContainerInstance.nodeType === COMMENT_NODE
-        ? rootContainerInstance.parentNode
-        : rootContainerInstance;
-      const ownNamespace = container.namespaceURI || null;
-      type = container.tagName;
-      namespace = getChildNamespace(ownNamespace, type);
+    const nodeType = rootContainerInstance.nodeType;
+    switch (nodeType) {
+      case DOCUMENT_NODE:
+      case DOCUMENT_FRAGMENT_NODE: {
+        type = nodeType === DOCUMENT_NODE ? '#document' : '#fragment';
+        let root = (rootContainerInstance: any).documentElement;
+        namespace = root ? root.namespaceURI : getChildNamespace(null, '');
+        break;
+      }
+      default: {
+        const container: any = nodeType === COMMENT_NODE
+          ? rootContainerInstance.parentNode
+          : rootContainerInstance;
+        const ownNamespace = container.namespaceURI || null;
+        type = container.tagName;
+        namespace = getChildNamespace(ownNamespace, type);
+        break;
+      }
     }
     if (__DEV__) {
       const validatedTag = type.toLowerCase();
@@ -232,7 +239,7 @@ var DOMRenderer = ReactFiberReconciler({
     if (__DEV__) {
       // TODO: take namespace into account when validating.
       const hostContextDev = ((hostContext: any): HostContextDev);
-      validateDOMNesting(type, null, null, hostContextDev.ancestorInfo);
+      validateDOMNesting(type, null, hostContextDev.ancestorInfo);
       if (
         typeof props.children === 'string' ||
         typeof props.children === 'number'
@@ -243,7 +250,7 @@ var DOMRenderer = ReactFiberReconciler({
           type,
           null,
         );
-        validateDOMNesting(null, string, null, ownAncestorInfo);
+        validateDOMNesting(null, string, ownAncestorInfo);
       }
       parentNamespace = hostContextDev.namespace;
     } else {
@@ -298,7 +305,7 @@ var DOMRenderer = ReactFiberReconciler({
           type,
           null,
         );
-        validateDOMNesting(null, string, null, ownAncestorInfo);
+        validateDOMNesting(null, string, ownAncestorInfo);
       }
     }
     return diffProperties(
@@ -365,7 +372,7 @@ var DOMRenderer = ReactFiberReconciler({
   ): TextInstance {
     if (__DEV__) {
       const hostContextDev = ((hostContext: any): HostContextDev);
-      validateDOMNesting(null, text, null, hostContextDev.ancestorInfo);
+      validateDOMNesting(null, text, hostContextDev.ancestorInfo);
     }
     var textNode: TextInstance = createTextNode(text, rootContainerInstance);
     precacheFiberNode(internalInstanceHandle, textNode);
@@ -519,30 +526,96 @@ var DOMRenderer = ReactFiberReconciler({
     return diffHydratedText(textInstance, text);
   },
 
-  didNotHydrateInstance(
-    parentInstance: Instance | Container,
+  didNotMatchHydratedContainerTextInstance(
+    parentContainer: Container,
+    textInstance: TextInstance,
+    text: string,
+  ) {
+    if (__DEV__) {
+      warnForUnmatchedText(textInstance, text);
+    }
+  },
+
+  didNotMatchHydratedTextInstance(
+    parentType: string,
+    parentProps: Props,
+    parentInstance: Instance,
+    textInstance: TextInstance,
+    text: string,
+  ) {
+    if (__DEV__ && parentProps[SUPPRESS_HYDRATION_WARNING] !== true) {
+      warnForUnmatchedText(textInstance, text);
+    }
+  },
+
+  didNotHydrateContainerInstance(
+    parentContainer: Container,
     instance: Instance | TextInstance,
   ) {
-    if (instance.nodeType === 1) {
-      warnForDeletedHydratableElement(parentInstance, (instance: any));
-    } else {
-      warnForDeletedHydratableText(parentInstance, (instance: any));
+    if (__DEV__) {
+      if (instance.nodeType === 1) {
+        warnForDeletedHydratableElement(parentContainer, (instance: any));
+      } else {
+        warnForDeletedHydratableText(parentContainer, (instance: any));
+      }
+    }
+  },
+
+  didNotHydrateInstance(
+    parentType: string,
+    parentProps: Props,
+    parentInstance: Instance,
+    instance: Instance | TextInstance,
+  ) {
+    if (__DEV__ && parentProps[SUPPRESS_HYDRATION_WARNING] !== true) {
+      if (instance.nodeType === 1) {
+        warnForDeletedHydratableElement(parentInstance, (instance: any));
+      } else {
+        warnForDeletedHydratableText(parentInstance, (instance: any));
+      }
+    }
+  },
+
+  didNotFindHydratableContainerInstance(
+    parentContainer: Container,
+    type: string,
+    props: Props,
+  ) {
+    if (__DEV__) {
+      warnForInsertedHydratedElement(parentContainer, type, props);
+    }
+  },
+
+  didNotFindHydratableContainerTextInstance(
+    parentContainer: Container,
+    text: string,
+  ) {
+    if (__DEV__) {
+      warnForInsertedHydratedText(parentContainer, text);
     }
   },
 
   didNotFindHydratableInstance(
-    parentInstance: Instance | Container,
+    parentType: string,
+    parentProps: Props,
+    parentInstance: Instance,
     type: string,
     props: Props,
   ) {
-    warnForInsertedHydratedElement(parentInstance, type, props);
+    if (__DEV__ && parentProps[SUPPRESS_HYDRATION_WARNING] !== true) {
+      warnForInsertedHydratedElement(parentInstance, type, props);
+    }
   },
 
   didNotFindHydratableTextInstance(
-    parentInstance: Instance | Container,
+    parentType: string,
+    parentProps: Props,
+    parentInstance: Instance,
     text: string,
   ) {
-    warnForInsertedHydratedText(parentInstance, text);
+    if (__DEV__ && parentProps[SUPPRESS_HYDRATION_WARNING] !== true) {
+      warnForInsertedHydratedText(parentInstance, text);
+    }
   },
 
   scheduleDeferredCallback: ReactDOMFrameScheduling.rIC,
@@ -675,6 +748,48 @@ function createPortal(
 var ReactDOMFiber = {
   createPortal,
 
+  findDOMNode(
+    componentOrElement: Element | ?React$Component<any, any>,
+  ): null | Element | Text {
+    if (__DEV__) {
+      var owner = (ReactCurrentOwner.current: any);
+      if (owner !== null) {
+        var warnedAboutRefsInRender = owner.stateNode._warnedAboutRefsInRender;
+        warning(
+          warnedAboutRefsInRender,
+          '%s is accessing findDOMNode inside its render(). ' +
+            'render() should be a pure function of props and state. It should ' +
+            'never access something that requires stale data from the previous ' +
+            'render, such as refs. Move this logic to componentDidMount and ' +
+            'componentDidUpdate instead.',
+          getComponentName(owner) || 'A component',
+        );
+        owner.stateNode._warnedAboutRefsInRender = true;
+      }
+    }
+    if (componentOrElement == null) {
+      return null;
+    }
+    if ((componentOrElement: any).nodeType === ELEMENT_NODE) {
+      return (componentOrElement: any);
+    }
+
+    var inst = ReactInstanceMap.get(componentOrElement);
+    if (inst) {
+      return DOMRenderer.findHostInstance(inst);
+    }
+
+    if (typeof componentOrElement.render === 'function') {
+      invariant(false, 'Unable to find node on an unmounted component.');
+    } else {
+      invariant(
+        false,
+        'Element appears to be neither ReactComponent nor DOMNode. Keys: %s',
+        Object.keys(componentOrElement),
+      );
+    }
+  },
+
   hydrate(element: React$Node, container: DOMContainer, callback: ?Function) {
     // TODO: throw or warn if we couldn't hydrate?
     return renderSubtreeIntoContainer(null, element, container, true, callback);
@@ -767,8 +882,6 @@ var ReactDOMFiber = {
       return false;
     }
   },
-
-  findDOMNode: findDOMNode,
 
   // Temporary alias since we already shipped React 16 RC with it.
   // TODO: remove in React 17.

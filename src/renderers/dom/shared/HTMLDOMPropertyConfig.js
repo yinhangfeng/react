@@ -26,9 +26,6 @@ var HTMLDOMPropertyConfig = {
   // name warnings.
   Properties: {
     allowFullScreen: HAS_BOOLEAN_VALUE,
-    // IE only true/false iFrame attribute
-    // https://msdn.microsoft.com/en-us/library/ms533072(v=vs.85).aspx
-    allowTransparency: HAS_STRING_BOOLEAN_VALUE,
     // specifies target context for links with `preload` type
     async: HAS_BOOLEAN_VALUE,
     // autoFocus is polyfilled/normalized by AutoFocusUtils
@@ -70,6 +67,8 @@ var HTMLDOMPropertyConfig = {
     // Style must be explicitly set in the attribute list. React components
     // expect a style object
     style: 0,
+    // Keep it in the whitelist because it is case-sensitive for SVG.
+    tabIndex: 0,
     // itemScope is for for Microdata support.
     // See http://schema.org/docs/gs.html
     itemScope: HAS_BOOLEAN_VALUE,

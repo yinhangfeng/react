@@ -25,21 +25,22 @@ var {
 } = require('ReactFiberContext');
 var {createFiberRoot} = require('ReactFiberRoot');
 var ReactFiberScheduler = require('ReactFiberScheduler');
+var ReactInstanceMap = require('ReactInstanceMap');
 var {HostComponent} = require('ReactTypeOfWork');
+var emptyObject = require('fbjs/lib/emptyObject');
 
 if (__DEV__) {
   var warning = require('fbjs/lib/warning');
   var ReactFiberInstrumentation = require('ReactFiberInstrumentation');
   var ReactDebugCurrentFiber = require('ReactDebugCurrentFiber');
   var getComponentName = require('getComponentName');
+  var didWarnAboutNestedUpdates = false;
 }
 
 var {
   findCurrentHostFiber,
   findCurrentHostFiberWithNoPortals,
 } = require('ReactFiberTreeReflection');
-
-var getContextForSubtree = require('getContextForSubtree');
 
 export type Deadline = {
   timeRemaining: () => number,
@@ -139,14 +140,48 @@ export type HostConfig<T, P, I, TI, PI, C, CX, PL> = {
     text: string,
     internalInstanceHandle: OpaqueHandle,
   ) => boolean,
-  didNotHydrateInstance?: (parentInstance: I | C, instance: I | TI) => void,
+  didNotMatchHydratedContainerTextInstance?: (
+    parentContainer: C,
+    textInstance: TI,
+    text: string,
+  ) => void,
+  didNotMatchHydratedTextInstance?: (
+    parentType: T,
+    parentProps: P,
+    parentInstance: I,
+    textInstance: TI,
+    text: string,
+  ) => void,
+  didNotHydrateContainerInstance?: (
+    parentContainer: C,
+    instance: I | TI,
+  ) => void,
+  didNotHydrateInstance?: (
+    parentType: T,
+    parentProps: P,
+    parentInstance: I,
+    instance: I | TI,
+  ) => void,
+  didNotFindHydratableContainerInstance?: (
+    parentContainer: C,
+    type: T,
+    props: P,
+  ) => void,
+  didNotFindHydratableContainerTextInstance?: (
+    parentContainer: C,
+    text: string,
+  ) => void,
   didNotFindHydratableInstance?: (
-    parentInstance: I | C,
+    parentType: T,
+    parentProps: P,
+    parentInstance: I,
     type: T,
     props: P,
   ) => void,
   didNotFindHydratableTextInstance?: (
-    parentInstance: I | C,
+    parentType: T,
+    parentProps: P,
+    parentInstance: I,
     text: string,
   ) => void,
 
@@ -178,12 +213,19 @@ export type Reconciler<C, I, TI> = {
   findHostInstanceWithNoPortals(component: Fiber): I | TI | null,
 };
 
-getContextForSubtree._injectFiber(function(fiber: Fiber) {
+function getContextForSubtree(
+  parentComponent: ?React$Component<any, any>,
+): Object {
+  if (!parentComponent) {
+    return emptyObject;
+  }
+
+  const fiber = ReactInstanceMap.get(parentComponent);
   const parentContext = findCurrentUnmaskedContext(fiber);
   return isContextProvider(fiber)
-    ? processChildContext(fiber, parentContext, false)
+    ? processChildContext(fiber, parentContext)
     : parentContext;
-});
+}
 
 module.exports = function<T, P, I, TI, PI, C, CX, PL>(
   config: HostConfig<T, P, I, TI, PI, C, CX, PL>,
@@ -207,8 +249,10 @@ module.exports = function<T, P, I, TI, PI, C, CX, PL>(
     if (__DEV__) {
       if (
         ReactDebugCurrentFiber.phase === 'render' &&
-        ReactDebugCurrentFiber.current !== null
+        ReactDebugCurrentFiber.current !== null &&
+        !didWarnAboutNestedUpdates
       ) {
+        didWarnAboutNestedUpdates = true;
         warning(
           false,
           'Render methods should be a pure function of props and state; ' +

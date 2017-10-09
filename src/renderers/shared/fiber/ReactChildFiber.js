@@ -13,7 +13,6 @@
 import type {ReactElement} from 'ReactElementType';
 import type {ReactCoroutine, ReactPortal, ReactYield} from 'ReactTypes';
 import type {Fiber} from 'ReactFiber';
-import type {ReactInstance} from 'ReactInstanceType';
 import type {PriorityLevel} from 'ReactPriorityLevel';
 
 var {REACT_COROUTINE_TYPE, REACT_YIELD_TYPE} = require('ReactCoroutine');
@@ -36,6 +35,7 @@ if (__DEV__) {
    * updates.
    */
   var ownerHasKeyUseWarning = {};
+  var ownerHasFunctionTypeWarning = {};
 
   var warnForMissingKey = (child: mixed) => {
     if (child === null || typeof child !== 'object') {
@@ -120,20 +120,15 @@ function coerceRef(current: Fiber | null, element: ReactElement) {
   let mixedRef = element.ref;
   if (mixedRef !== null && typeof mixedRef !== 'function') {
     if (element._owner) {
-      const owner: ?(Fiber | ReactInstance) = (element._owner: any);
+      const owner: ?Fiber = (element._owner: any);
       let inst;
       if (owner) {
-        if (typeof owner.tag === 'number') {
-          const ownerFiber = ((owner: any): Fiber);
-          invariant(
-            ownerFiber.tag === ClassComponent,
-            'Stateless function components cannot have refs.',
-          );
-          inst = ownerFiber.stateNode;
-        } else {
-          // Stack
-          inst = (owner: any).getPublicInstance();
-        }
+        const ownerFiber = ((owner: any): Fiber);
+        invariant(
+          ownerFiber.tag === ClassComponent,
+          'Stateless function components cannot have refs.',
+        );
+        inst = ownerFiber.stateNode;
       }
       invariant(
         inst,
@@ -198,6 +193,17 @@ function throwOnInvalidObjectType(returnFiber: Fiber, newChild: Object) {
 }
 
 function warnOnFunctionType() {
+  const currentComponentErrorInfo =
+    'Functions are not valid as a React child. This may happen if ' +
+    'you return a Component instead of <Component /> from render. ' +
+    'Or maybe you meant to call this function rather than return it.' +
+    (getCurrentFiberStackAddendum() || '');
+
+  if (ownerHasFunctionTypeWarning[currentComponentErrorInfo]) {
+    return;
+  }
+  ownerHasFunctionTypeWarning[currentComponentErrorInfo] = true;
+
   warning(
     false,
     'Functions are not valid as a React child. This may happen if ' +

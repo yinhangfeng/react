@@ -10,10 +10,6 @@
 <PROJECT_ROOT>/.*/__mocks__/.*
 <PROJECT_ROOT>/.*/__tests__/.*
 
-# Ignore Docs
-<PROJECT_ROOT>/docs/.*
-<PROJECT_ROOT>/.*/docs/.*
-
 [include]
 
 [libs]
