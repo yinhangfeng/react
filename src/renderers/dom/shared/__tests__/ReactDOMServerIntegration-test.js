@@ -991,6 +991,11 @@ describe('ReactDOMServerIntegration', () => {
       );
       expect(e.getAttribute('onunknownevent')).toBe(null);
     });
+
+    itRenders('custom attribute named `on`', async render => {
+      const e = await render(<div on="tap:do-something" />);
+      expect(e.getAttribute('on')).toEqual('tap:do-something');
+    });
   });
 
   describe('elements and children', function() {
@@ -1338,6 +1343,14 @@ describe('ReactDOMServerIntegration', () => {
           expect(e.tabIndex).toBe(1);
         },
       );
+
+      itRenders('svg element with a mixed case name', async render => {
+        let e = await render(<svg><filter><feMorphology /></filter></svg>);
+        e = e.firstChild.firstChild;
+        expect(e.childNodes.length).toBe(0);
+        expect(e.tagName).toBe('feMorphology');
+        expect(e.namespaceURI).toBe('http://www.w3.org/2000/svg');
+      });
 
       itRenders('a math element', async render => {
         const e = await render(<math />);

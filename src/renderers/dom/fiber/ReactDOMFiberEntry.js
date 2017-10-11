@@ -437,6 +437,8 @@ var DOMRenderer = ReactFiberReconciler({
     }
   },
 
+  now: ReactDOMFrameScheduling.now,
+
   canHydrateInstance(
     instance: Instance | TextInstance,
     type: string,
@@ -444,7 +446,7 @@ var DOMRenderer = ReactFiberReconciler({
   ): boolean {
     return (
       instance.nodeType === ELEMENT_NODE &&
-      type === instance.nodeName.toLowerCase()
+      type.toLowerCase() === instance.nodeName.toLowerCase()
     );
   },
 
