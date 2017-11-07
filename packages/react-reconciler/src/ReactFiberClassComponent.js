@@ -7,40 +7,37 @@
  * @flow
  */
 
-'use strict';
-
 import type {Fiber} from './ReactFiber';
 import type {ExpirationTime} from './ReactFiberExpirationTime';
 
-var {Update} = require('shared/ReactTypeOfSideEffect');
-var ReactFeatureFlags = require('shared/ReactFeatureFlags');
-var {isMounted} = require('shared/ReactFiberTreeReflection');
-var ReactInstanceMap = require('shared/ReactInstanceMap');
-var emptyObject = require('fbjs/lib/emptyObject');
-var getComponentName = require('shared/getComponentName');
-var shallowEqual = require('fbjs/lib/shallowEqual');
-var invariant = require('fbjs/lib/invariant');
+import {Update} from 'shared/ReactTypeOfSideEffect';
+import {enableAsyncSubtreeAPI} from 'shared/ReactFeatureFlags';
+import {isMounted} from 'shared/ReactFiberTreeReflection';
+import * as ReactInstanceMap from 'shared/ReactInstanceMap';
+import emptyObject from 'fbjs/lib/emptyObject';
+import getComponentName from 'shared/getComponentName';
+import shallowEqual from 'fbjs/lib/shallowEqual';
+import invariant from 'fbjs/lib/invariant';
+import warning from 'fbjs/lib/warning';
 
-var {AsyncUpdates} = require('./ReactTypeOfInternalContext');
-var {
+import {startPhaseTimer, stopPhaseTimer} from './ReactDebugFiberPerf';
+import {AsyncUpdates} from './ReactTypeOfInternalContext';
+import {
   cacheContext,
   getMaskedContext,
   getUnmaskedContext,
   isContextConsumer,
-} = require('./ReactFiberContext');
-var {
+} from './ReactFiberContext';
+import {
   insertUpdateIntoFiber,
   processUpdateQueue,
-} = require('./ReactFiberUpdateQueue');
-var {hasContextChanged} = require('./ReactFiberContext');
+} from './ReactFiberUpdateQueue';
+import {hasContextChanged} from './ReactFiberContext';
 
 const fakeInternalInstance = {};
 const isArray = Array.isArray;
 
 if (__DEV__) {
-  var warning = require('fbjs/lib/warning');
-
-  var {startPhaseTimer, stopPhaseTimer} = require('./ReactDebugFiberPerf');
   var didWarnAboutStateAssignmentForComponent = {};
 
   var warnOnInvalidCallback = function(callback: mixed, callerName: string) {
@@ -75,7 +72,7 @@ if (__DEV__) {
   Object.freeze(fakeInternalInstance);
 }
 
-module.exports = function(
+export default function(
   scheduleWork: (fiber: Fiber, expirationTime: ExpirationTime) => void,
   computeExpirationForFiber: (fiber: Fiber) => ExpirationTime,
   memoizeProps: (workInProgress: Fiber, props: any) => void,
@@ -163,17 +160,13 @@ module.exports = function(
     const instance = workInProgress.stateNode;
     const type = workInProgress.type;
     if (typeof instance.shouldComponentUpdate === 'function') {
-      if (__DEV__) {
-        startPhaseTimer(workInProgress, 'shouldComponentUpdate');
-      }
+      startPhaseTimer(workInProgress, 'shouldComponentUpdate');
       const shouldUpdate = instance.shouldComponentUpdate(
         newProps,
         newState,
         newContext,
       );
-      if (__DEV__) {
-        stopPhaseTimer();
-      }
+      stopPhaseTimer();
 
       if (__DEV__) {
         warning(
@@ -367,14 +360,11 @@ module.exports = function(
   }
 
   function callComponentWillMount(workInProgress, instance) {
-    if (__DEV__) {
-      startPhaseTimer(workInProgress, 'componentWillMount');
-    }
+    startPhaseTimer(workInProgress, 'componentWillMount');
     const oldState = instance.state;
     instance.componentWillMount();
-    if (__DEV__) {
-      stopPhaseTimer();
-    }
+
+    stopPhaseTimer();
 
     if (oldState !== instance.state) {
       if (__DEV__) {
@@ -396,14 +386,10 @@ module.exports = function(
     newProps,
     newContext,
   ) {
-    if (__DEV__) {
-      startPhaseTimer(workInProgress, 'componentWillReceiveProps');
-    }
+    startPhaseTimer(workInProgress, 'componentWillReceiveProps');
     const oldState = instance.state;
     instance.componentWillReceiveProps(newProps, newContext);
-    if (__DEV__) {
-      stopPhaseTimer();
-    }
+    stopPhaseTimer();
 
     if (instance.state !== oldState) {
       if (__DEV__) {
@@ -452,7 +438,7 @@ module.exports = function(
     instance.context = getMaskedContext(workInProgress, unmaskedContext);
 
     if (
-      ReactFeatureFlags.enableAsyncSubtreeAPI &&
+      enableAsyncSubtreeAPI &&
       workInProgress.type != null &&
       workInProgress.type.prototype != null &&
       workInProgress.type.prototype.unstable_isAsyncReactComponent === true
@@ -675,13 +661,9 @@ module.exports = function(
 
     if (shouldUpdate) {
       if (typeof instance.componentWillUpdate === 'function') {
-        if (__DEV__) {
-          startPhaseTimer(workInProgress, 'componentWillUpdate');
-        }
+        startPhaseTimer(workInProgress, 'componentWillUpdate');
         instance.componentWillUpdate(newProps, newState, newContext);
-        if (__DEV__) {
-          stopPhaseTimer();
-        }
+        stopPhaseTimer();
       }
       if (typeof instance.componentDidUpdate === 'function') {
         workInProgress.effectTag |= Update;
@@ -720,4 +702,4 @@ module.exports = function(
     // resumeMountClassInstance,
     updateClassInstance,
   };
-};
+}

@@ -5,15 +5,13 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-'use strict';
+import checkPropTypes from 'prop-types/checkPropTypes';
 
 var ReactControlledValuePropTypes = {
   checkPropTypes: null,
 };
 
 if (__DEV__) {
-  var checkPropTypes = require('prop-types/checkPropTypes');
-
   var hasReadOnlyValue = {
     button: true,
     checkbox: true,
@@ -73,4 +71,4 @@ if (__DEV__) {
   };
 }
 
-module.exports = ReactControlledValuePropTypes;
+export default ReactControlledValuePropTypes;

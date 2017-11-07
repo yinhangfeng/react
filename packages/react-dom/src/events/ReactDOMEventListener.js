@@ -5,17 +5,13 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-'use strict';
+import {batchedUpdates} from 'events/ReactGenericBatching';
+import {isFiberMounted} from 'shared/ReactFiberTreeReflection';
+import {HostRoot} from 'shared/ReactTypeOfWork';
+import EventListener from 'fbjs/lib/EventListener';
 
-var ReactGenericBatching = require('events/ReactGenericBatching');
-var ReactErrorUtils = require('shared/ReactErrorUtils');
-var ReactFiberTreeReflection = require('shared/ReactFiberTreeReflection');
-var ReactTypeOfWork = require('shared/ReactTypeOfWork');
-var warning = require('fbjs/lib/warning');
-var {HostRoot} = ReactTypeOfWork;
-
-var getEventTarget = require('./getEventTarget');
-var ReactDOMComponentTree = require('../client/ReactDOMComponentTree');
+import getEventTarget from './getEventTarget';
+import {getClosestInstanceFromNode} from '../client/ReactDOMComponentTree';
 
 var CALLBACK_BOOKKEEPING_POOL_SIZE = 10;
 var callbackBookkeepingPool = [];
@@ -84,12 +80,12 @@ function handleTopLevelImpl(bookKeeping) {
       break;
     }
     bookKeeping.ancestors.push(ancestor);
-    ancestor = ReactDOMComponentTree.getClosestInstanceFromNode(root);
+    ancestor = getClosestInstanceFromNode(root);
   } while (ancestor);
 
   for (var i = 0; i < bookKeeping.ancestors.length; i++) {
     targetInst = bookKeeping.ancestors[i];
-    ReactDOMEventListener._handleTopLevel(
+    _handleTopLevel(
       bookKeeping.topLevelType,
       targetInst,
       bookKeeping.nativeEvent,
@@ -98,120 +94,94 @@ function handleTopLevelImpl(bookKeeping) {
   }
 }
 
-var ReactDOMEventListener = {
-  _enabled: true,
-  _handleTopLevel: null,
+// TODO: can we stop exporting these?
+export let _enabled = true;
+export let _handleTopLevel: null;
 
-  setHandleTopLevel: function(handleTopLevel) {
-    ReactDOMEventListener._handleTopLevel = handleTopLevel;
-  },
+export function setHandleTopLevel(handleTopLevel) {
+  _handleTopLevel = handleTopLevel;
+}
 
-  setEnabled: function(enabled) {
-    ReactDOMEventListener._enabled = !!enabled;
-  },
+export function setEnabled(enabled) {
+  _enabled = !!enabled;
+}
 
-  isEnabled: function() {
-    return ReactDOMEventListener._enabled;
-  },
+export function isEnabled() {
+  return _enabled;
+}
 
-  /**
-   * Traps top-level events by using event bubbling.
-   *
-   * @param {string} topLevelType Record from `BrowserEventConstants`.
-   * @param {string} handlerBaseName Event name (e.g. "click").
-   * @param {object} element Element on which to attach listener.
-   * @return {?object} An object with a remove function which will forcefully
-   *                  remove the listener.
-   * @internal
-   */
-  trapBubbledEvent: function(topLevelType, handlerBaseName, element) {
-    if (!element) {
-      return null;
-    }
-    // TODO: Once we have static injection we should just wrap
-    // ReactDOMEventListener.dispatchEvent statically so we don't have to do
-    // it for every event type.
-    var callback = ReactErrorUtils.wrapEventListener(
-      handlerBaseName,
-      ReactDOMEventListener.dispatchEvent.bind(null, topLevelType),
-    );
-    if (element.addEventListener) {
-      element.addEventListener(handlerBaseName, callback, false);
-    } else if (element.attachEvent) {
-      element.attachEvent('on' + handlerBaseName, callback);
-    }
-  },
+/**
+ * Traps top-level events by using event bubbling.
+ *
+ * @param {string} topLevelType Record from `BrowserEventConstants`.
+ * @param {string} handlerBaseName Event name (e.g. "click").
+ * @param {object} element Element on which to attach listener.
+ * @return {?object} An object with a remove function which will forcefully
+ *                  remove the listener.
+ * @internal
+ */
+export function trapBubbledEvent(topLevelType, handlerBaseName, element) {
+  if (!element) {
+    return null;
+  }
+  return EventListener.listen(
+    element,
+    handlerBaseName,
+    dispatchEvent.bind(null, topLevelType),
+  );
+}
 
-  /**
-   * Traps a top-level event by using event capturing.
-   *
-   * @param {string} topLevelType Record from `BrowserEventConstants`.
-   * @param {string} handlerBaseName Event name (e.g. "click").
-   * @param {object} element Element on which to attach listener.
-   * @return {?object} An object with a remove function which will forcefully
-   *                  remove the listener.
-   * @internal
-   */
-  trapCapturedEvent: function(topLevelType, handlerBaseName, element) {
-    if (!element) {
-      return null;
-    }
-    if (element.addEventListener) {
-      // TODO: Once we have static injection we should just wrap
-      // ReactDOMEventListener.dispatchEvent statically so we don't have to do
-      // it for every event type.
-      var callback = ReactErrorUtils.wrapEventListener(
-        handlerBaseName,
-        ReactDOMEventListener.dispatchEvent.bind(null, topLevelType),
-      );
-      element.addEventListener(handlerBaseName, callback, true);
-    } else {
-      if (__DEV__) {
-        warning(
-          false,
-          'Attempted to listen to events during the capture phase on a ' +
-            'browser that does not support the capture phase. Your application ' +
-            'will not receive some events.',
-        );
-      }
-    }
-  },
+/**
+ * Traps a top-level event by using event capturing.
+ *
+ * @param {string} topLevelType Record from `BrowserEventConstants`.
+ * @param {string} handlerBaseName Event name (e.g. "click").
+ * @param {object} element Element on which to attach listener.
+ * @return {?object} An object with a remove function which will forcefully
+ *                  remove the listener.
+ * @internal
+ */
+export function trapCapturedEvent(topLevelType, handlerBaseName, element) {
+  if (!element) {
+    return null;
+  }
+  return EventListener.capture(
+    element,
+    handlerBaseName,
+    dispatchEvent.bind(null, topLevelType),
+  );
+}
 
-  dispatchEvent: function(topLevelType, nativeEvent) {
-    if (!ReactDOMEventListener._enabled) {
-      return;
-    }
+export function dispatchEvent(topLevelType, nativeEvent) {
+  if (!_enabled) {
+    return;
+  }
 
-    var nativeEventTarget = getEventTarget(nativeEvent);
-    var targetInst = ReactDOMComponentTree.getClosestInstanceFromNode(
-      nativeEventTarget,
-    );
-    if (
-      targetInst !== null &&
-      typeof targetInst.tag === 'number' &&
-      !ReactFiberTreeReflection.isFiberMounted(targetInst)
-    ) {
-      // If we get an event (ex: img onload) before committing that
-      // component's mount, ignore it for now (that is, treat it as if it was an
-      // event on a non-React tree). We might also consider queueing events and
-      // dispatching them after the mount.
-      targetInst = null;
-    }
+  var nativeEventTarget = getEventTarget(nativeEvent);
+  var targetInst = getClosestInstanceFromNode(nativeEventTarget);
+  if (
+    targetInst !== null &&
+    typeof targetInst.tag === 'number' &&
+    !isFiberMounted(targetInst)
+  ) {
+    // If we get an event (ex: img onload) before committing that
+    // component's mount, ignore it for now (that is, treat it as if it was an
+    // event on a non-React tree). We might also consider queueing events and
+    // dispatching them after the mount.
+    targetInst = null;
+  }
 
-    var bookKeeping = getTopLevelCallbackBookKeeping(
-      topLevelType,
-      nativeEvent,
-      targetInst,
-    );
+  var bookKeeping = getTopLevelCallbackBookKeeping(
+    topLevelType,
+    nativeEvent,
+    targetInst,
+  );
 
-    try {
-      // Event queue being processed in the same cycle allows
-      // `preventDefault`.
-      ReactGenericBatching.batchedUpdates(handleTopLevelImpl, bookKeeping);
-    } finally {
-      releaseTopLevelCallbackBookKeeping(bookKeeping);
-    }
-  },
-};
-
-module.exports = ReactDOMEventListener;
+  try {
+    // Event queue being processed in the same cycle allows
+    // `preventDefault`.
+    batchedUpdates(handleTopLevelImpl, bookKeeping);
+  } finally {
+    releaseTopLevelCallbackBookKeeping(bookKeeping);
+  }
+}
