@@ -22,10 +22,10 @@ class App extends React.Component {
 
   render() {
     return (
-      <div ref="root">
+      <div>
         <h1>Hello React!{this.state.test1}</h1>
         <Test1>
-          <p ref="test_ref">test ref</p>
+          <p>test ref</p>
         </Test1>
         <button
           onClick={() => {

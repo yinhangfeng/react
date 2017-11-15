@@ -8,7 +8,7 @@ module.exports = {
     print: './src/print.js',
   },
   plugins: [
-    new CleanWebpackPlugin(['dist']),
+    // new CleanWebpackPlugin(['dist']),
     // https://github.com/jantimon/html-webpack-plugin
     new HtmlWebpackPlugin({
       template: 'src/index.html',
