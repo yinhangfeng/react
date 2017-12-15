@@ -3,8 +3,11 @@ import './style.css';
 import printMe from './print.js';
 import { cube } from './math.js';
 
-import React from 'react';
+import React, { createElement } from 'react';
 import ReactDOM from 'react-dom';
+import test from './test';
+
+console.log(test);
 
 class App extends React.Component {
   constructor() {
@@ -57,7 +60,7 @@ class App extends React.Component {
         >
           testSetState
         </button>
-        <div
+        {/* <div
           onStartShouldSetResponderCapture={e => {
             console.log('onStartShouldSetResponderCapture', e);
           }}
@@ -103,7 +106,24 @@ class App extends React.Component {
             console.log('onResponderTerminate', e);
           }}
           style={{ width: '100%', height: '300px', backgroundColor: '#99aa77' }}
-        />
+        /> */}
+        {this._renderChildren()}
+      </div>
+    );
+  }
+
+  _renderChildren() {
+    // dev 模式下children 不给key
+    // 1. children element 直接以参数形式给createElement 在dev 模式下 createElementWithValidation 中会被标记_store.validated = true
+    // 2. children element 给createElement 的参数存在数组 在createElementWithValidation 会警告
+    // 3. children 数组直接在props 中 createElementWithValidation 不会检查 在 ReactChildFiber.js warnForMissingKey 中会警告
+
+    const c = createElement;
+    return (
+      <div>
+        {c('div', {}, c('div'), c('div'))}
+        {c('div', {}, [c('div'), c('div')])}
+        {c('div', { children: [c('div'), c('div')] })}
       </div>
     );
   }
