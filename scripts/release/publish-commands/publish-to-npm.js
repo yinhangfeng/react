@@ -15,13 +15,13 @@ const push = async ({cwd, dry, packages, version}) => {
 
   const publishProject = async project => {
     try {
-      const path = join(cwd, 'build', 'packages', project);
+      const path = join(cwd, 'build', 'node_modules', project);
       await execUnlessDry(`npm publish --tag ${tag}`, {cwd: path, dry});
 
       const packagePath = join(
         cwd,
         'build',
-        'packages',
+        'node_modules',
         project,
         'package.json'
       );
@@ -50,7 +50,7 @@ const push = async ({cwd, dry, packages, version}) => {
         }
 
         // If we've just published a stable release,
-        // Update the @next tag to also point to it (so @next doens't lag behind).
+        // Update the @next tag to also point to it (so @next doesn't lag behind).
         if (!isPrerelease) {
           await execUnlessDry(
             `npm dist-tag add ${project}@${packageVersion} next`,

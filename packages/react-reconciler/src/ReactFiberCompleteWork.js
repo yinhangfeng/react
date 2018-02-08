@@ -8,7 +8,6 @@
  */
 
 import type {HostConfig} from 'react-reconciler';
-import type {ReactCall} from 'shared/ReactTypes';
 import type {Fiber} from './ReactFiber';
 import type {ExpirationTime} from './ReactFiberExpirationTime';
 import type {HostContext} from './ReactFiberHostContext';
@@ -31,17 +30,20 @@ import {
   CallComponent,
   CallHandlerPhase,
   ReturnComponent,
+  ContextProvider,
+  ContextConsumer,
   Fragment,
+  Mode,
 } from 'shared/ReactTypeOfWork';
 import {Placement, Ref, Update} from 'shared/ReactTypeOfSideEffect';
 import invariant from 'fbjs/lib/invariant';
 
 import {reconcileChildFibers} from './ReactChildFiber';
 import {
-  popContextProvider,
-  popTopLevelContextObject,
+  popContextProvider as popLegacyContextProvider,
+  popTopLevelContextObject as popTopLevelLegacyContextObject,
 } from './ReactFiberContext';
-import {Never} from './ReactFiberExpirationTime';
+import {popProvider} from './ReactFiberNewContext';
 
 export default function<T, P, I, TI, HI, PI, C, CC, CX, PL>(
   config: HostConfig<T, P, I, TI, HI, PI, C, CC, CX, PL>,
@@ -94,7 +96,7 @@ export default function<T, P, I, TI, HI, PI, C, CC, CX, PL>(
       ) {
         invariant(false, 'A call cannot have host component children.');
       } else if (node.tag === ReturnComponent) {
-        returns.push(node.type);
+        returns.push(node.pendingProps.value);
       } else if (node.child !== null) {
         node.child.return = node;
         node = node.child;
@@ -116,9 +118,9 @@ export default function<T, P, I, TI, HI, PI, C, CC, CX, PL>(
     workInProgress: Fiber,
     renderExpirationTime: ExpirationTime,
   ) {
-    var call = (workInProgress.memoizedProps: ?ReactCall);
+    const props = workInProgress.memoizedProps;
     invariant(
-      call,
+      props,
       'Should be resolved by now. This error is likely caused by a bug in ' +
         'React. Please file an issue.',
     );
@@ -134,13 +136,13 @@ export default function<T, P, I, TI, HI, PI, C, CC, CX, PL>(
 
     // Build up the returns.
     // TODO: Compare this to a generator or opaque helpers like Children.
-    var returns: Array<mixed> = [];
+    const returns: Array<mixed> = [];
     appendAllReturns(returns, workInProgress);
-    var fn = call.handler;
-    var props = call.props;
-    var nextChildren = fn(props, returns);
+    const fn = props.handler;
+    const childProps = props.props;
+    const nextChildren = fn(childProps, returns);
 
-    var currentFirstChild = current !== null ? current.child : null;
+    const currentFirstChild = current !== null ? current.child : null;
     workInProgress.child = reconcileChildFibers(
       workInProgress,
       currentFirstChild,
@@ -197,6 +199,7 @@ export default function<T, P, I, TI, HI, PI, C, CC, CX, PL>(
         oldProps: P,
         newProps: P,
         rootContainerInstance: C,
+        currentHostContext: CX,
       ) {
         // TODO: Type this specific to this type of component.
         workInProgress.updateQueue = (updatePayload: any);
@@ -290,6 +293,7 @@ export default function<T, P, I, TI, HI, PI, C, CC, CX, PL>(
         oldProps: P,
         newProps: P,
         rootContainerInstance: C,
+        currentHostContext: CX,
       ) {
         // If there are no effects associated with this node, then none of our children had any updates.
         // This guarantees that we can reuse all of them.
@@ -317,6 +321,7 @@ export default function<T, P, I, TI, HI, PI, C, CC, CX, PL>(
               type,
               newProps,
               rootContainerInstance,
+              currentHostContext,
             )
           ) {
             markUpdate(workInProgress);
@@ -371,6 +376,7 @@ export default function<T, P, I, TI, HI, PI, C, CC, CX, PL>(
         oldProps: P,
         newProps: P,
         rootContainerInstance: C,
+        currentHostContext: CX,
       ) {
         // Noop
       };
@@ -392,29 +398,18 @@ export default function<T, P, I, TI, HI, PI, C, CC, CX, PL>(
     workInProgress: Fiber,
     renderExpirationTime: ExpirationTime,
   ): Fiber | null {
-    // Get the latest props.
-    let newProps = workInProgress.pendingProps;
-    if (newProps === null) {
-      newProps = workInProgress.memoizedProps;
-    } else if (
-      workInProgress.expirationTime !== Never ||
-      renderExpirationTime === Never
-    ) {
-      // Reset the pending props, unless this was a down-prioritization.
-      workInProgress.pendingProps = null;
-    }
-
+    const newProps = workInProgress.pendingProps;
     switch (workInProgress.tag) {
       case FunctionalComponent:
         return null;
       case ClassComponent: {
         // We are leaving this subtree, so pop context if any.
-        popContextProvider(workInProgress);
+        popLegacyContextProvider(workInProgress);
         return null;
       }
       case HostRoot: {
         popHostContainer(workInProgress);
-        popTopLevelContextObject(workInProgress);
+        popTopLevelLegacyContextObject(workInProgress);
         const fiberRoot = (workInProgress.stateNode: FiberRoot);
         if (fiberRoot.pendingContext) {
           fiberRoot.context = fiberRoot.pendingContext;
@@ -463,6 +458,7 @@ export default function<T, P, I, TI, HI, PI, C, CC, CX, PL>(
             oldProps,
             newProps,
             rootContainerInstance,
+            currentHostContext,
           );
 
           if (current.ref !== workInProgress.ref) {
@@ -519,6 +515,7 @@ export default function<T, P, I, TI, HI, PI, C, CC, CX, PL>(
                 type,
                 newProps,
                 rootContainerInstance,
+                currentHostContext,
               )
             ) {
               markUpdate(workInProgress);
@@ -583,9 +580,17 @@ export default function<T, P, I, TI, HI, PI, C, CC, CX, PL>(
         return null;
       case Fragment:
         return null;
+      case Mode:
+        return null;
       case HostPortal:
         popHostContainer(workInProgress);
         updateHostContainer(workInProgress);
+        return null;
+      case ContextProvider:
+        // Pop provider fiber
+        popProvider(workInProgress);
+        return null;
+      case ContextConsumer:
         return null;
       // Error cases
       case IndeterminateComponent:

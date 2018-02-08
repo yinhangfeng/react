@@ -8,8 +8,9 @@ const fs = require('fs');
 const prevBuildResults = require('./results.json');
 
 const currentBuildResults = {
-  // Mutated during the build.
-  bundleSizes: Object.assign({}, prevBuildResults.bundleSizes),
+  // Mutated inside build.js during a build run.
+  // We make a copy so that partial rebuilds don't erase other stats.
+  bundleSizes: [...prevBuildResults.bundleSizes],
 };
 
 function saveResults() {
@@ -20,8 +21,10 @@ function saveResults() {
 }
 
 function percentChange(prev, current) {
-  const change = Math.floor((current - prev) / prev * 100);
+  return Math.floor((current - prev) / prev * 100);
+}
 
+function percentChangeString(change) {
   if (change > 0) {
     return chalk.red.bold(`+${change} %`);
   } else if (change <= 0) {
@@ -29,45 +32,75 @@ function percentChange(prev, current) {
   }
 }
 
+const resultsHeaders = [
+  'Bundle',
+  'Prev Size',
+  'Current Size',
+  'Diff',
+  'Prev Gzip',
+  'Current Gzip',
+  'Diff',
+];
+
+function generateResultsArray(current, prevResults) {
+  return current.bundleSizes
+    .map(result => {
+      const prev = prevResults.bundleSizes.filter(
+        res =>
+          res.filename === result.filename &&
+          res.bundleType === result.bundleType
+      )[0];
+      if (result === prev) {
+        // We didn't rebuild this bundle.
+        return;
+      }
+
+      const size = result.size;
+      const gzip = result.gzip;
+      let prevSize = prev ? prev.size : 0;
+      let prevGzip = prev ? prev.gzip : 0;
+
+      return {
+        filename: result.filename,
+        bundleType: result.bundleType,
+        packageName: result.packageName,
+        prevSize: filesize(prevSize),
+        prevFileSize: filesize(size),
+        prevFileSizeChange: percentChange(prevSize, size),
+        prevGzip: filesize(prevGzip),
+        prevGzipSize: filesize(gzip),
+        prevGzipSizeChange: percentChange(prevGzip, gzip),
+      };
+      // Strip any nulls
+    })
+    .filter(f => f);
+}
+
 function printResults() {
   const table = new Table({
-    head: [
-      chalk.gray.yellow('Bundle'),
-      chalk.gray.yellow('Prev Size'),
-      chalk.gray.yellow('Current Size'),
-      chalk.gray.yellow('Diff'),
-      chalk.gray.yellow('Prev Gzip'),
-      chalk.gray.yellow('Current Gzip'),
-      chalk.gray.yellow('Diff'),
-    ],
+    head: resultsHeaders.map(chalk.gray.yellow),
   });
-  Object.keys(currentBuildResults.bundleSizes).forEach(key => {
-    const result = currentBuildResults.bundleSizes[key];
-    const prev = prevBuildResults.bundleSizes[key];
-    if (result === prev) {
-      // We didn't rebuild this bundle.
-      return;
-    }
 
-    const size = result.size;
-    const gzip = result.gzip;
-    let prevSize = prev ? prev.size : 0;
-    let prevGzip = prev ? prev.gzip : 0;
+  const results = generateResultsArray(currentBuildResults, prevBuildResults);
+  results.forEach(result => {
     table.push([
-      chalk.white.bold(key),
-      chalk.gray.bold(filesize(prevSize)),
-      chalk.white.bold(filesize(size)),
-      percentChange(prevSize, size),
-      chalk.gray.bold(filesize(prevGzip)),
-      chalk.white.bold(filesize(gzip)),
-      percentChange(prevGzip, gzip),
+      chalk.white.bold(`${result.filename}  (${result.bundleType})`),
+      chalk.gray.bold(result.prevSize),
+      chalk.white.bold(result.prevFileSize),
+      percentChangeString(result.prevFileSizeChange),
+      chalk.gray.bold(result.prevGzip),
+      chalk.white.bold(result.prevGzipSize),
+      percentChangeString(result.prevGzipSizeChange),
     ]);
   });
+
   return table.toString();
 }
 
 module.exports = {
+  currentBuildResults,
+  generateResultsArray,
   printResults,
   saveResults,
-  currentBuildResults,
+  resultsHeaders,
 };

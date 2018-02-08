@@ -12,13 +12,14 @@ import type {FiberRoot} from 'react-reconciler/src/ReactFiberRoot';
 
 import ReactFiberReconciler from 'react-reconciler';
 import {batchedUpdates} from 'events/ReactGenericBatching';
-import {findCurrentFiberUsingSlowPath} from 'shared/ReactFiberTreeReflection';
+import {findCurrentFiberUsingSlowPath} from 'react-reconciler/reflection';
 import emptyObject from 'fbjs/lib/emptyObject';
 import {
   Fragment,
   FunctionalComponent,
   ClassComponent,
   HostComponent,
+  HostPortal,
   HostText,
   HostRoot,
 } from 'shared/ReactTypeOfWork';
@@ -111,7 +112,7 @@ function removeChild(
   parentInstance.children.splice(index, 1);
 }
 
-var TestRenderer = ReactFiberReconciler({
+const TestRenderer = ReactFiberReconciler({
   getRootHostContext() {
     return emptyObject;
   },
@@ -195,11 +196,13 @@ var TestRenderer = ReactFiberReconciler({
     };
   },
 
-  scheduleDeferredCallback(fn: Function): void {
-    setTimeout(fn, 0, {timeRemaining: Infinity});
+  scheduleDeferredCallback(fn: Function): number {
+    return setTimeout(fn, 0, {timeRemaining: Infinity});
   },
 
-  useSyncScheduling: true,
+  cancelDeferredCallback(timeoutID: number): void {
+    clearTimeout(timeoutID);
+  },
 
   getPublicInstance,
 
@@ -250,7 +253,7 @@ var TestRenderer = ReactFiberReconciler({
   },
 });
 
-var defaultTestOptions = {
+const defaultTestOptions = {
   createNodeMock: function() {
     return null;
   },
@@ -284,19 +287,46 @@ function toJSON(inst: Instance | TextInstance): ReactTestRendererNode {
   }
 }
 
-function nodeAndSiblingsTrees(nodeWithSibling: ?Fiber) {
-  var array = [];
-  var node = nodeWithSibling;
+function childrenToTree(node) {
+  if (!node) {
+    return null;
+  }
+  const children = nodeAndSiblingsArray(node);
+  if (children.length === 0) {
+    return null;
+  } else if (children.length === 1) {
+    return toTree(children[0]);
+  }
+  return flatten(children.map(toTree));
+}
+
+function nodeAndSiblingsArray(nodeWithSibling) {
+  const array = [];
+  let node = nodeWithSibling;
   while (node != null) {
     array.push(node);
     node = node.sibling;
   }
-  const trees = array.map(toTree);
-  return trees.length ? trees : null;
+  return array;
 }
 
-function hasSiblings(node: ?Fiber) {
-  return node && node.sibling;
+function flatten(arr) {
+  const result = [];
+  const stack = [{i: 0, array: arr}];
+  while (stack.length) {
+    const n = stack.pop();
+    while (n.i < n.array.length) {
+      const el = n.array[n.i];
+      n.i += 1;
+      if (Array.isArray(el)) {
+        stack.push(n);
+        stack.push({i: 0, array: el});
+        break;
+      }
+      result.push(el);
+    }
+  }
+  return result;
 }
 
 function toTree(node: ?Fiber) {
@@ -304,38 +334,39 @@ function toTree(node: ?Fiber) {
     return null;
   }
   switch (node.tag) {
-    case HostRoot: // 3
-      return toTree(node.child);
+    case HostRoot:
+      return childrenToTree(node.child);
+    case HostPortal:
+      return childrenToTree(node.child);
     case ClassComponent:
       return {
         nodeType: 'component',
         type: node.type,
         props: {...node.memoizedProps},
         instance: node.stateNode,
-        rendered: hasSiblings(node.child)
-          ? nodeAndSiblingsTrees(node.child)
-          : toTree(node.child),
+        rendered: childrenToTree(node.child),
       };
-    case FunctionalComponent: // 1
+    case FunctionalComponent:
       return {
         nodeType: 'component',
         type: node.type,
         props: {...node.memoizedProps},
         instance: null,
-        rendered: hasSiblings(node.child)
-          ? nodeAndSiblingsTrees(node.child)
-          : toTree(node.child),
+        rendered: childrenToTree(node.child),
       };
-    case HostComponent: // 5
+    case HostComponent: {
       return {
         nodeType: 'host',
         type: node.type,
         props: {...node.memoizedProps},
         instance: null, // TODO: use createNodeMock here somehow?
-        rendered: nodeAndSiblingsTrees(node.child),
+        rendered: flatten(nodeAndSiblingsArray(node.child).map(toTree)),
       };
-    case HostText: // 6
+    }
+    case HostText:
       return node.stateNode.text;
+    case Fragment:
+      return childrenToTree(node.child);
     default:
       invariant(
         false,
@@ -557,22 +588,26 @@ function propsMatch(props: Object, filter: Object): boolean {
   return true;
 }
 
-var ReactTestRendererFiber = {
+const ReactTestRendererFiber = {
   create(element: React$Element<any>, options: TestRendererOptions) {
-    var createNodeMock = defaultTestOptions.createNodeMock;
+    let createNodeMock = defaultTestOptions.createNodeMock;
     if (options && typeof options.createNodeMock === 'function') {
       createNodeMock = options.createNodeMock;
     }
-    var container = {
+    let container = {
       children: [],
       createNodeMock,
       tag: 'CONTAINER',
     };
-    var root: FiberRoot | null = TestRenderer.createContainer(container, false);
+    let root: FiberRoot | null = TestRenderer.createContainer(
+      container,
+      false,
+      false,
+    );
     invariant(root != null, 'something went wrong');
     TestRenderer.updateContainer(element, root, null, null);
 
-    var entry = {
+    const entry = {
       root: undefined, // makes flow happy
       // we define a 'getter' for 'root' below using 'Object.defineProperty'
       toJSON() {
@@ -603,7 +638,7 @@ var ReactTestRendererFiber = {
         if (root == null || root.current == null) {
           return;
         }
-        TestRenderer.updateContainer(null, root, null);
+        TestRenderer.updateContainer(null, root, null, null);
         container = null;
         root = null;
       },
