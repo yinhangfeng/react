@@ -1,11 +1,12 @@
 import _ from 'lodash';
 import './style.css';
-import printMe from './print.js';
+// import printMe from './print.js';
 import { cube } from './math.js';
 
 import React, { createElement } from 'react';
 import ReactDOM from 'react-dom';
 import test from './test';
+import TestComp from './TestComp';
 
 console.log(test);
 
@@ -16,6 +17,7 @@ class App extends React.Component {
   }
 
   componentDidMount() {
+    var a = cube;
     console.log('App componentDidMount refs:', this.refs);
   }
 
@@ -108,6 +110,7 @@ class App extends React.Component {
           style={{ width: '100%', height: '300px', backgroundColor: '#99aa77' }}
         /> */}
         {this._renderChildren()}
+        <TestComp/>
       </div>
     );
   }
