@@ -27,8 +27,14 @@ import {
   CallComponent,
 } from 'shared/ReactTypeOfWork';
 import ReactErrorUtils from 'shared/ReactErrorUtils';
-import {Placement, Update, ContentReset} from 'shared/ReactTypeOfSideEffect';
+import {
+  Placement,
+  Update,
+  ContentReset,
+  Snapshot,
+} from 'shared/ReactTypeOfSideEffect';
 import invariant from 'fbjs/lib/invariant';
+import warning from 'fbjs/lib/warning';
 
 import {commitCallbacks} from './ReactFiberUpdateQueue';
 import {onCommitUnmount} from './ReactFiberDevToolsHook';
@@ -43,6 +49,11 @@ const {
   clearCaughtError,
 } = ReactErrorUtils;
 
+let didWarnAboutUndefinedSnapshotBeforeUpdate: Set<mixed> | null = null;
+if (__DEV__) {
+  didWarnAboutUndefinedSnapshotBeforeUpdate = new Set();
+}
+
 function logError(boundary: Fiber, errorInfo: CapturedValue<mixed>) {
   const source = errorInfo.source;
   let stack = errorInfo.stack;
@@ -52,21 +63,19 @@ function logError(boundary: Fiber, errorInfo: CapturedValue<mixed>) {
 
   const capturedError: CapturedError = {
     componentName: source !== null ? getComponentName(source) : null,
-    error: errorInfo.value,
-    errorBoundary: boundary,
     componentStack: stack !== null ? stack : '',
+    error: errorInfo.value,
+    errorBoundary: null,
     errorBoundaryName: null,
     errorBoundaryFound: false,
     willRetry: false,
   };
 
-  if (boundary !== null) {
+  if (boundary !== null && boundary.tag === ClassComponent) {
+    capturedError.errorBoundary = boundary.stateNode;
     capturedError.errorBoundaryName = getComponentName(boundary);
-    capturedError.errorBoundaryFound = capturedError.willRetry =
-      boundary.tag === ClassComponent;
-  } else {
-    capturedError.errorBoundaryName = null;
-    capturedError.errorBoundaryFound = capturedError.willRetry = false;
+    capturedError.errorBoundaryFound = true;
+    capturedError.willRetry = true;
   }
 
   try {
@@ -147,7 +156,64 @@ export default function<T, P, I, TI, HI, PI, C, CC, CX, PL>(
           }
         }
       } else {
-        ref.value = null;
+        ref.current = null;
+      }
+    }
+  }
+
+  function commitBeforeMutationLifeCycles(
+    current: Fiber | null,
+    finishedWork: Fiber,
+  ): void {
+    switch (finishedWork.tag) {
+      case ClassComponent: {
+        if (finishedWork.effectTag & Snapshot) {
+          if (current !== null) {
+            const prevProps = current.memoizedProps;
+            const prevState = current.memoizedState;
+            startPhaseTimer(finishedWork, 'getSnapshotBeforeUpdate');
+            const instance = finishedWork.stateNode;
+            instance.props = finishedWork.memoizedProps;
+            instance.state = finishedWork.memoizedState;
+            const snapshot = instance.getSnapshotBeforeUpdate(
+              prevProps,
+              prevState,
+            );
+            if (__DEV__) {
+              const didWarnSet = ((didWarnAboutUndefinedSnapshotBeforeUpdate: any): Set<
+                mixed,
+              >);
+              if (
+                snapshot === undefined &&
+                !didWarnSet.has(finishedWork.type)
+              ) {
+                didWarnSet.add(finishedWork.type);
+                warning(
+                  false,
+                  '%s.getSnapshotBeforeUpdate(): A snapshot value (or null) ' +
+                    'must be returned. You have returned undefined.',
+                  getComponentName(finishedWork),
+                );
+              }
+            }
+            instance.__reactInternalSnapshotBeforeUpdate = snapshot;
+            stopPhaseTimer();
+          }
+        }
+        return;
+      }
+      case HostRoot:
+      case HostComponent:
+      case HostText:
+      case HostPortal:
+        // Nothing to do for these component types
+        return;
+      default: {
+        invariant(
+          false,
+          'This unit of work tag should not have side-effects. This error is ' +
+            'likely caused by a bug in React. Please file an issue.',
+        );
       }
     }
   }
@@ -175,7 +241,11 @@ export default function<T, P, I, TI, HI, PI, C, CC, CX, PL>(
             startPhaseTimer(finishedWork, 'componentDidUpdate');
             instance.props = finishedWork.memoizedProps;
             instance.state = finishedWork.memoizedState;
-            instance.componentDidUpdate(prevProps, prevState);
+            instance.componentDidUpdate(
+              prevProps,
+              prevState,
+              instance.__reactInternalSnapshotBeforeUpdate,
+            );
             stopPhaseTimer();
           }
         }
@@ -269,8 +339,11 @@ export default function<T, P, I, TI, HI, PI, C, CC, CX, PL>(
           for (let i = 0; i < capturedErrors.length; i++) {
             const errorInfo = capturedErrors[i];
             const error = errorInfo.value;
+            const stack = errorInfo.stack;
             logError(finishedWork, errorInfo);
-            instance.componentDidCatch(error);
+            instance.componentDidCatch(error, {
+              componentStack: stack !== null ? stack : '',
+            });
           }
         }
         break;
@@ -315,7 +388,19 @@ export default function<T, P, I, TI, HI, PI, C, CC, CX, PL>(
       if (typeof ref === 'function') {
         ref(instanceToUse);
       } else {
-        ref.value = instanceToUse;
+        if (__DEV__) {
+          if (!ref.hasOwnProperty('current')) {
+            warning(
+              false,
+              'Unexpected ref object provided for %s. ' +
+                'Use either a ref-setter function or React.createRef().%s',
+              getComponentName(finishedWork),
+              getStackAddendumByWorkInProgressFiber(finishedWork),
+            );
+          }
+        }
+
+        ref.current = instanceToUse;
       }
     }
   }
@@ -326,7 +411,7 @@ export default function<T, P, I, TI, HI, PI, C, CC, CX, PL>(
       if (typeof currentRef === 'function') {
         currentRef(null);
       } else {
-        currentRef.value = null;
+        currentRef.current = null;
       }
     }
   }
@@ -478,6 +563,7 @@ export default function<T, P, I, TI, HI, PI, C, CC, CX, PL>(
           commitContainer(finishedWork);
         },
         commitLifeCycles,
+        commitBeforeMutationLifeCycles,
         commitErrorLogging,
         commitAttachRef,
         commitDetachRef,
@@ -800,6 +886,7 @@ export default function<T, P, I, TI, HI, PI, C, CC, CX, PL>(
 
   if (enableMutatingReconciler) {
     return {
+      commitBeforeMutationLifeCycles,
       commitResetTextContent,
       commitPlacement,
       commitDeletion,

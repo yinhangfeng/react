@@ -28,7 +28,6 @@ import * as EventPluginHub from 'events/EventPluginHub';
 import * as EventPluginRegistry from 'events/EventPluginRegistry';
 import * as EventPropagators from 'events/EventPropagators';
 import * as ReactInstanceMap from 'shared/ReactInstanceMap';
-import {enableCreateRoot} from 'shared/ReactFeatureFlags';
 import ReactVersion from 'shared/ReactVersion';
 import * as ReactDOMFrameScheduling from 'shared/ReactDOMFrameScheduling';
 import {ReactCurrentOwner} from 'shared/ReactGlobalSharedState';
@@ -1126,7 +1125,7 @@ const ReactDOM: Object = {
   ): null | Element | Text {
     if (__DEV__) {
       let owner = (ReactCurrentOwner.current: any);
-      if (owner !== null) {
+      if (owner !== null && owner.stateNode !== null) {
         const warnedAboutRefsInRender =
           owner.stateNode._warnedAboutRefsInRender;
         warning(
@@ -1148,20 +1147,7 @@ const ReactDOM: Object = {
       return (componentOrElement: any);
     }
 
-    const inst = ReactInstanceMap.get(componentOrElement);
-    if (inst) {
-      return DOMRenderer.findHostInstance(inst);
-    }
-
-    if (typeof componentOrElement.render === 'function') {
-      invariant(false, 'Unable to find node on an unmounted component.');
-    } else {
-      invariant(
-        false,
-        'Element appears to be neither ReactComponent nor DOMNode. Keys: %s',
-        Object.keys(componentOrElement),
-      );
-    }
+    return DOMRenderer.findHostInstance(componentOrElement);
   },
 
   hydrate(element: React$Node, container: DOMContainer, callback: ?Function) {
@@ -1304,15 +1290,13 @@ type RootOptions = {
   hydrate?: boolean,
 };
 
-if (enableCreateRoot) {
-  ReactDOM.createRoot = function createRoot(
-    container: DOMContainer,
-    options?: RootOptions,
-  ): ReactRoot {
-    const hydrate = options != null && options.hydrate === true;
-    return new ReactRoot(container, true, hydrate);
-  };
-}
+ReactDOM.unstable_createRoot = function createRoot(
+  container: DOMContainer,
+  options?: RootOptions,
+): ReactRoot {
+  const hydrate = options != null && options.hydrate === true;
+  return new ReactRoot(container, true, hydrate);
+};
 
 const foundDevTools = DOMRenderer.injectIntoDevTools({
   findFiberByHostInstance: ReactDOMComponentTree.getClosestInstanceFromNode,

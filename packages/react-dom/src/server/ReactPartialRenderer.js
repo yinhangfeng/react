@@ -27,6 +27,7 @@ import describeComponentFrame from 'shared/describeComponentFrame';
 import {ReactDebugCurrentFrame} from 'shared/ReactGlobalSharedState';
 import {warnAboutDeprecatedLifecycles} from 'shared/ReactFeatureFlags';
 import {
+  REACT_FORWARD_REF_TYPE,
   REACT_FRAGMENT_TYPE,
   REACT_STRICT_MODE_TYPE,
   REACT_ASYNC_MODE_TYPE,
@@ -674,8 +675,8 @@ class ReactDOMServerRenderer {
   pushProvider<T>(provider: ReactProvider<T>): void {
     this.providerIndex += 1;
     this.providerStack[this.providerIndex] = provider;
-    const context: ReactContext<any> = provider.type.context;
-    context.currentValue = provider.props.value;
+    const context: ReactContext<any> = provider.type._context;
+    context._currentValue = provider.props.value;
   }
 
   popProvider<T>(provider: ReactProvider<T>): void {
@@ -688,15 +689,15 @@ class ReactDOMServerRenderer {
     }
     this.providerStack[this.providerIndex] = null;
     this.providerIndex -= 1;
-    const context: ReactContext<any> = provider.type.context;
+    const context: ReactContext<any> = provider.type._context;
     if (this.providerIndex < 0) {
-      context.currentValue = context.defaultValue;
+      context._currentValue = context._defaultValue;
     } else {
       // We assume this type is correct because of the index check above.
       const previousProvider: ReactProvider<any> = (this.providerStack[
         this.providerIndex
       ]: any);
-      context.currentValue = previousProvider.props.value;
+      context._currentValue = previousProvider.props.value;
     }
   }
 
@@ -841,6 +842,25 @@ class ReactDOMServerRenderer {
       }
       if (typeof elementType === 'object' && elementType !== null) {
         switch (elementType.$$typeof) {
+          case REACT_FORWARD_REF_TYPE: {
+            const element: ReactElement = ((nextChild: any): ReactElement);
+            const nextChildren = toArray(
+              elementType.render(element.props, element.ref),
+            );
+            const frame: Frame = {
+              type: null,
+              domNamespace: parentNamespace,
+              children: nextChildren,
+              childIndex: 0,
+              context: context,
+              footer: '',
+            };
+            if (__DEV__) {
+              ((frame: any): FrameDev).debugElementStack = [];
+            }
+            this.stack.push(frame);
+            return '';
+          }
           case REACT_PROVIDER_TYPE: {
             const provider: ReactProvider<any> = (nextChild: any);
             const nextProps = provider.props;
@@ -865,7 +885,7 @@ class ReactDOMServerRenderer {
           case REACT_CONTEXT_TYPE: {
             const consumer: ReactConsumer<any> = (nextChild: any);
             const nextProps: any = consumer.props;
-            const nextValue = consumer.type.currentValue;
+            const nextValue = consumer.type._currentValue;
 
             const nextChildren = toArray(nextProps.children(nextValue));
             const frame: Frame = {
@@ -935,8 +955,9 @@ class ReactDOMServerRenderer {
         // allow <SVG> or <mATH>.
         warning(
           tag === element.type,
-          '<%s /> is using uppercase HTML. Always use lowercase HTML tags ' +
-            'in React.',
+          '<%s /> is using incorrect casing. ' +
+            'Use PascalCase for React components, ' +
+            'or lowercase for HTML elements.',
           element.type,
         );
       }

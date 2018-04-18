@@ -93,8 +93,8 @@ ${source}`;
 ${license}
  *
  * @noflow
- * @providesModule ${globalName}-dev
  * @preventMunge
+ * @preserve-invariant-messages
  */
 
 'use strict';
@@ -112,8 +112,8 @@ ${source}
 ${license}
  *
  * @noflow
- * @providesModule ${globalName}-prod
  * @preventMunge
+ * @preserve-invariant-messages
  */
 
 ${source}`;

@@ -1019,12 +1019,14 @@ describe('ReactErrorBoundaries', () => {
       'ErrorBoundary render error',
       'ErrorBoundary componentDidUpdate',
     ]);
-    expect(errorMessageRef.value.toString()).toEqual('[object HTMLDivElement]');
+    expect(errorMessageRef.current.toString()).toEqual(
+      '[object HTMLDivElement]',
+    );
 
     log.length = 0;
     ReactDOM.unmountComponentAtNode(container);
     expect(log).toEqual(['ErrorBoundary componentWillUnmount']);
-    expect(errorMessageRef.value).toEqual(null);
+    expect(errorMessageRef.current).toEqual(null);
   });
 
   it('successfully mounts if no error occurs', () => {
@@ -2078,5 +2080,45 @@ describe('ReactErrorBoundaries', () => {
         ReactDOM.render(<Foo />, container);
       });
     }).toThrow('foo error');
+  });
+
+  it('handles errors that occur in before-mutation commit hook', () => {
+    const errors = [];
+    let caughtError;
+    class Parent extends React.Component {
+      getSnapshotBeforeUpdate() {
+        errors.push('parent sad');
+        throw new Error('parent sad');
+      }
+      componentDidUpdate() {}
+      render() {
+        return <Child {...this.props} />;
+      }
+    }
+    class Child extends React.Component {
+      getSnapshotBeforeUpdate() {
+        errors.push('child sad');
+        throw new Error('child sad');
+      }
+      componentDidUpdate() {}
+      render() {
+        return <div />;
+      }
+    }
+
+    const container = document.createElement('div');
+    ReactDOM.render(<Parent value={1} />, container);
+    try {
+      ReactDOM.render(<Parent value={2} />, container);
+    } catch (e) {
+      if (e.message !== 'parent sad' && e.message !== 'child sad') {
+        throw e;
+      }
+      caughtError = e;
+    }
+
+    expect(errors).toEqual(['child sad', 'parent sad']);
+    // Error should be the first thrown
+    expect(caughtError.message).toBe('child sad');
   });
 });

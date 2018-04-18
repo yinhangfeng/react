@@ -17,10 +17,10 @@ export const {
   debugRenderPhaseSideEffectsForStrictMode,
   warnAboutDeprecatedLifecycles,
   replayFailedUnitOfWorkWithInvokeGuardedCallback,
+  alwaysUseRequestIdleCallbackPolyfill,
 } = require('ReactFeatureFlags');
 
 // The rest of the flags are static for better dead code elimination.
-export const enableCreateRoot = true;
 
 // The www bundles only use the mutating reconciler.
 export const enableMutatingReconciler = true;

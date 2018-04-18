@@ -10,7 +10,6 @@
 import invariant from 'fbjs/lib/invariant';
 
 // Exports ReactDOM.createRoot
-export const enableCreateRoot = true;
 export const enableUserTimingAPI = __DEV__;
 
 // Mutating mode (React DOM, React ART, React Native):
@@ -37,6 +36,8 @@ export const replayFailedUnitOfWorkWithInvokeGuardedCallback = __DEV__;
 
 // Warn about deprecated, async-unsafe lifecycles; relates to RFC #6:
 export const warnAboutDeprecatedLifecycles = false;
+
+export const alwaysUseRequestIdleCallbackPolyfill = false;
 
 // Only used in www builds.
 export function addUserTimingListener() {

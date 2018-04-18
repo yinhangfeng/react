@@ -11,6 +11,8 @@ import type {HostConfig} from 'react-reconciler';
 import type {Fiber} from './ReactFiber';
 import type {ExpirationTime} from './ReactFiberExpirationTime';
 import type {HostContext} from './ReactFiberHostContext';
+import type {LegacyContext} from './ReactFiberContext';
+import type {NewContext} from './ReactFiberNewContext';
 import type {HydrationContext} from './ReactFiberHydrationContext';
 import type {FiberRoot} from './ReactFiberRoot';
 
@@ -32,6 +34,7 @@ import {
   ReturnComponent,
   ContextProvider,
   ContextConsumer,
+  ForwardRef,
   Fragment,
   Mode,
 } from 'shared/ReactTypeOfWork';
@@ -45,15 +48,12 @@ import {
 import invariant from 'fbjs/lib/invariant';
 
 import {reconcileChildFibers} from './ReactChildFiber';
-import {
-  popContextProvider as popLegacyContextProvider,
-  popTopLevelContextObject as popTopLevelLegacyContextObject,
-} from './ReactFiberContext';
-import {popProvider} from './ReactFiberNewContext';
 
 export default function<T, P, I, TI, HI, PI, C, CC, CX, PL>(
   config: HostConfig<T, P, I, TI, HI, PI, C, CC, CX, PL>,
   hostContext: HostContext<C, CX>,
+  legacyContext: LegacyContext,
+  newContext: NewContext,
   hydrationContext: HydrationContext<C, CX>,
 ) {
   const {
@@ -74,6 +74,13 @@ export default function<T, P, I, TI, HI, PI, C, CC, CX, PL>(
   } = hostContext;
 
   const {
+    popContextProvider: popLegacyContextProvider,
+    popTopLevelContextObject: popTopLevelLegacyContextObject,
+  } = legacyContext;
+
+  const {popProvider} = newContext;
+
+  const {
     prepareToHydrateHostInstance,
     prepareToHydrateHostTextInstance,
     popHydrationState,
@@ -81,7 +88,7 @@ export default function<T, P, I, TI, HI, PI, C, CC, CX, PL>(
 
   function markUpdate(workInProgress: Fiber) {
     // Tag the fiber with an update effect. This turns a Placement into
-    // an UpdateAndPlacement.
+    // a PlacementAndUpdate.
     workInProgress.effectTag |= Update;
   }
 
@@ -602,6 +609,8 @@ export default function<T, P, I, TI, HI, PI, C, CC, CX, PL>(
         return null;
       case ReturnComponent:
         // Does nothing.
+        return null;
+      case ForwardRef:
         return null;
       case Fragment:
         return null;

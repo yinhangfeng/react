@@ -124,10 +124,10 @@ const bundles = [
       'RCTEventEmitter',
       'TextInputState',
       'UIManager',
-      'View',
       'deepDiffer',
       'deepFreezeAndThrowOnMutationInDev',
       'flattenStyle',
+      'ReactNativeViewConfigRegistry',
     ],
   },
 
@@ -146,17 +146,17 @@ const bundles = [
       'TextInputState',
       'UIManager',
       'FabricUIManager',
-      'View',
       'deepDiffer',
       'deepFreezeAndThrowOnMutationInDev',
       'flattenStyle',
+      'ReactNativeViewConfigRegistry',
     ],
   },
 
   /******* React Test Renderer *******/
   {
     label: 'test',
-    bundleTypes: [FB_DEV, NODE_DEV, NODE_PROD],
+    bundleTypes: [FB_DEV, NODE_DEV, NODE_PROD, UMD_DEV, UMD_PROD],
     moduleType: RENDERER,
     entry: 'react-test-renderer',
     global: 'ReactTestRenderer',
@@ -165,7 +165,7 @@ const bundles = [
 
   {
     label: 'test-shallow',
-    bundleTypes: [FB_DEV, NODE_DEV, NODE_PROD],
+    bundleTypes: [FB_DEV, NODE_DEV, NODE_PROD, UMD_DEV, UMD_PROD],
     moduleType: RENDERER,
     entry: 'react-test-renderer/shallow',
     global: 'ReactShallowRenderer',
@@ -238,7 +238,7 @@ const bundles = [
   /******* React Is *******/
   {
     label: 'react-is',
-    bundleTypes: [NODE_DEV, NODE_PROD, UMD_DEV, UMD_PROD],
+    bundleTypes: [NODE_DEV, NODE_PROD, FB_DEV, FB_PROD, UMD_DEV, UMD_PROD],
     moduleType: ISOMORPHIC,
     entry: 'react-is',
     global: 'ReactIs',
@@ -252,6 +252,16 @@ const bundles = [
     moduleType: ISOMORPHIC,
     entry: 'simple-cache-provider',
     global: 'SimpleCacheProvider',
+    externals: ['react'],
+  },
+
+  /******* createComponentWithSubscriptions (experimental) *******/
+  {
+    label: 'create-subscription',
+    bundleTypes: [NODE_DEV, NODE_PROD],
+    moduleType: ISOMORPHIC,
+    entry: 'create-subscription',
+    global: 'createSubscription',
     externals: ['react'],
   },
 ];

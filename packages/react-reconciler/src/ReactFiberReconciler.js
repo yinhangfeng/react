@@ -20,13 +20,9 @@ import * as ReactInstanceMap from 'shared/ReactInstanceMap';
 import {HostComponent} from 'shared/ReactTypeOfWork';
 import emptyObject from 'fbjs/lib/emptyObject';
 import getComponentName from 'shared/getComponentName';
+import invariant from 'fbjs/lib/invariant';
 import warning from 'fbjs/lib/warning';
 
-import {
-  findCurrentUnmaskedContext,
-  isContextProvider,
-  processChildContext,
-} from './ReactFiberContext';
 import {createFiberRoot} from './ReactFiberRoot';
 import * as ReactFiberDevToolsHook from './ReactFiberDevToolsHook';
 import ReactFiberScheduler from './ReactFiberScheduler';
@@ -42,6 +38,7 @@ if (__DEV__) {
 
 export type Deadline = {
   timeRemaining: () => number,
+  didTimeout: boolean,
 };
 
 type OpaqueHandle = Fiber;
@@ -268,25 +265,11 @@ export type Reconciler<C, I, TI> = {
   ): React$Component<any, any> | TI | I | null,
 
   // Use for findDOMNode/findHostNode. Legacy API.
-  findHostInstance(component: Fiber): I | TI | null,
+  findHostInstance(component: Object): I | TI | null,
 
   // Used internally for filtering out portals. Legacy API.
   findHostInstanceWithNoPortals(component: Fiber): I | TI | null,
 };
-
-function getContextForSubtree(
-  parentComponent: ?React$Component<any, any>,
-): Object {
-  if (!parentComponent) {
-    return emptyObject;
-  }
-
-  const fiber = ReactInstanceMap.get(parentComponent);
-  const parentContext = findCurrentUnmaskedContext(fiber);
-  return isContextProvider(fiber)
-    ? processChildContext(fiber, parentContext)
-    : parentContext;
-}
 
 export default function<T, P, I, TI, HI, PI, C, CC, CX, PL>(
   config: HostConfig<T, P, I, TI, HI, PI, C, CC, CX, PL>,
@@ -308,7 +291,28 @@ export default function<T, P, I, TI, HI, PI, C, CC, CX, PL>(
     syncUpdates,
     interactiveUpdates,
     flushInteractiveUpdates,
+    legacyContext,
   } = ReactFiberScheduler(config);
+
+  const {
+    findCurrentUnmaskedContext,
+    isContextProvider,
+    processChildContext,
+  } = legacyContext;
+
+  function getContextForSubtree(
+    parentComponent: ?React$Component<any, any>,
+  ): Object {
+    if (!parentComponent) {
+      return emptyObject;
+    }
+
+    const fiber = ReactInstanceMap.get(parentComponent);
+    const parentContext = findCurrentUnmaskedContext(fiber);
+    return isContextProvider(fiber)
+      ? processChildContext(fiber, parentContext)
+      : parentContext;
+  }
 
   function scheduleRootUpdate(
     current: Fiber,
@@ -399,7 +403,19 @@ export default function<T, P, I, TI, HI, PI, C, CC, CX, PL>(
     );
   }
 
-  function findHostInstance(fiber: Fiber): PI | null {
+  function findHostInstance(component: Object): PI | null {
+    const fiber = ReactInstanceMap.get(component);
+    if (fiber === undefined) {
+      if (typeof component.render === 'function') {
+        invariant(false, 'Unable to find node on an unmounted component.');
+      } else {
+        invariant(
+          false,
+          'Argument appears to not be a ReactComponent. Keys: %s',
+          Object.keys(component),
+        );
+      }
+    }
     const hostFiber = findCurrentHostFiber(fiber);
     if (hostFiber === null) {
       return null;
@@ -505,7 +521,11 @@ export default function<T, P, I, TI, HI, PI, C, CC, CX, PL>(
       return ReactFiberDevToolsHook.injectInternals({
         ...devToolsConfig,
         findHostInstanceByFiber(fiber: Fiber): I | TI | null {
-          return findHostInstance(fiber);
+          const hostFiber = findCurrentHostFiber(fiber);
+          if (hostFiber === null) {
+            return null;
+          }
+          return hostFiber.stateNode;
         },
         findFiberByHostInstance(instance: I | TI): Fiber | null {
           if (!findFiberByHostInstance) {

@@ -22,11 +22,11 @@ export const {
 } = require('ReactFeatureFlags');
 
 // The rest of the flags are static for better dead code elimination.
-export const enableCreateRoot = false;
 export const enableUserTimingAPI = __DEV__;
 export const enableMutatingReconciler = true;
 export const enableNoopReconciler = false;
 export const enablePersistentReconciler = false;
+export const alwaysUseRequestIdleCallbackPolyfill = false;
 
 // Only used in www builds.
 export function addUserTimingListener() {
