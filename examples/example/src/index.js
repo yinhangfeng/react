@@ -1,7 +1,7 @@
 import _ from 'lodash';
 import './style.css';
 // import printMe from './print.js';
-import { cube } from './math.js';
+import { cube } from './math';
 
 import React, { createElement } from 'react';
 import ReactDOM from 'react-dom';
@@ -17,7 +17,7 @@ class App extends React.Component {
   }
 
   componentDidMount() {
-    var a = cube;
+    this.a = cube(1);
     console.log('App componentDidMount refs:', this.refs);
   }
 

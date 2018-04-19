@@ -1,3 +1,5 @@
+import React, { createElement } from 'react';
+
 export default class TestComp extends React.Component {
   constructor() {
     super();
@@ -18,7 +20,7 @@ export default class TestComp extends React.Component {
 
   render() {
     return (
-      <div a={1} {...this.props}></div>
+      <div a={1} {...this.props}>test_comp</div>
     );
   }
 }
