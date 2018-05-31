@@ -8,7 +8,7 @@ module.exports = merge(common, {
   },
   // https://webpack.js.org/concepts/mode/
   mode: 'development',
-  devtool: 'inline-source-map',
+  devtool: 'eval-source-map',
   // https://webpack.js.org/configuration/dev-server/
   devServer: {
     contentBase: './dist',

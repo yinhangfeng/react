@@ -42,6 +42,7 @@ module.exports = {
                   pragma: '__react_create_element',
                   useBuiltIns: true,
                   // development: true,
+                  browsers: ['last 3 Chrome versions'],
                 },
               ]
             ],
