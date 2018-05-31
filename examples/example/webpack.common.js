@@ -36,9 +36,26 @@ module.exports = {
                   modules: false,
                 },
               ],
-              '@babel/preset-react',
+              [
+                '@babel/preset-react',
+                {
+                  pragma: '__react_create_element',
+                  useBuiltIns: true,
+                  // development: true,
+                },
+              ]
             ],
-            plugins: ['@babel/plugin-transform-runtime'],
+            plugins: [
+              '@babel/plugin-transform-runtime',
+              [
+                'babel-plugin-jsx-pragmatic',
+                {
+                  module: "react",
+                  import: "__react_create_element",
+                  export: "createElement",
+                }
+              ],
+            ],
           },
         },
       },

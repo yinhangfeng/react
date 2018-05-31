@@ -13,6 +13,8 @@ export default class TestComp extends React.Component {
     const b = Object.assign({
 
     }, a);
+
+    // this.__react_create_element = __react_create_element();
   }
 
   componentDidUpdate(prevProps, prevState) {
