@@ -1,4 +1,5 @@
-import './whyDidYouUpdate';
+import '@babel/polyfill';
+// import './whyDidYouUpdate';
 import React from 'react';
 import ReactDOM from 'react-dom';
 import ThemeContext from './ThemeContext';
