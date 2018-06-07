@@ -6,7 +6,8 @@
   "scripts": {
     "start": "webpack-dev-server --open --config scripts/webpack.config.js",
     "build": "webpack --env.production --config scripts/webpack.config.js --display-optimization-bailout",
-    "build-dev": "webpack --config scripts/webpack.config.js --display-optimization-bailout"
+    "build-dev": "webpack --config scripts/webpack.config.js --display-optimization-bailout",
+    "analyze": "ANALYZE=true webpack --env.production --config scripts/webpack.config.js"
   },
   "author": "",
   "license": "ISC",

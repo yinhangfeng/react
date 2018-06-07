@@ -1,0 +1,6 @@
+[ignore]
+.*/build/.*
+.*/examples/.*
+
+[libs]
+./packages

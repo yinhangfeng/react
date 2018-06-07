@@ -248,7 +248,7 @@ module.exports = function(env = { production: false } , argv) {
       modules: [
         'node_modules',
         // 加载未编译的 react 源码
-        resolve(__dirname, '../../../packages'),
+        resolve(__dirname, '../../packages'),
       ],
       extensions: [
         '.web.js',
@@ -264,19 +264,19 @@ module.exports = function(env = { production: false } , argv) {
       alias: {
         // scripts/rollup/forks.js
         // object-assign 与 react 循环依赖 所以直接用外部的
-        // 'object-assign': resolve(__dirname, '../../../packages/shared/forks/object-assign.umd.js'),
+        // 'object-assign': resolve(__dirname, '../../packages/shared/forks/object-assign.umd.js'),
 
-        // 'shared/ReactFeatureFlags': resolve(__dirname, '../../../packages/shared/forks/ReactFeatureFlags.www.js'),
-        // 'shared/requestAnimationFrameForReact': resolve(__dirname, '../../../packages/shared/forks/requestAnimationFrameForReact.www.js'),
-        // 'shared/ReactScheduler': resolve(__dirname, '../../../packages/shared/forks/ReactScheduler.www.js'),
-        // 'shared/lowPriorityWarning': resolve(__dirname, '../../../packages/shared/forks/lowPriorityWarning.www.js'),
-        // 'react/src/ReactCurrentOwner': resolve(__dirname, '../../../packages/react/src/forks/ReactCurrentOwner.www.js'),
-        // 'shared/invokeGuardedCallback': resolve(__dirname, '../../../packages/shared/forks/invokeGuardedCallback.www.js'),
-        // 'react-reconciler/src/ReactFiberErrorDialog': resolve(__dirname, '../../../packages/react-reconciler/src/forks/ReactFiberErrorDialog.www.js'),
-        './ReactFiberHostConfig': resolve(__dirname, '../../../packages/react-reconciler/src/forks/ReactFiberHostConfig.dom.js'),
-        // 'react-dom/src/events/EventListener': resolve(__dirname, '../../../packages/react-dom/src/events/forks/EventListener-www.js'),
-        'events/ResponderTopLevelEventTypes': resolve(__dirname, '../../../packages/events/forks/ResponderTopLevelEventTypes.dom.js'),
-        './ResponderTopLevelEventTypes': resolve(__dirname, '../../../packages/events/forks/ResponderTopLevelEventTypes.dom.js'),
+        // 'shared/ReactFeatureFlags': resolve(__dirname, '../../packages/shared/forks/ReactFeatureFlags.www.js'),
+        // 'shared/requestAnimationFrameForReact': resolve(__dirname, '../../packages/shared/forks/requestAnimationFrameForReact.www.js'),
+        // 'shared/ReactScheduler': resolve(__dirname, '../../packages/shared/forks/ReactScheduler.www.js'),
+        // 'shared/lowPriorityWarning': resolve(__dirname, '../../packages/shared/forks/lowPriorityWarning.www.js'),
+        // 'react/src/ReactCurrentOwner': resolve(__dirname, '../../packages/react/src/forks/ReactCurrentOwner.www.js'),
+        // 'shared/invokeGuardedCallback': resolve(__dirname, '../../packages/shared/forks/invokeGuardedCallback.www.js'),
+        // 'react-reconciler/src/ReactFiberErrorDialog': resolve(__dirname, '../../packages/react-reconciler/src/forks/ReactFiberErrorDialog.www.js'),
+        './ReactFiberHostConfig': resolve(__dirname, '../../packages/react-reconciler/src/forks/ReactFiberHostConfig.dom.js'),
+        // 'react-dom/src/events/EventListener': resolve(__dirname, '../../packages/react-dom/src/events/forks/EventListener-www.js'),
+        'events/ResponderTopLevelEventTypes': resolve(__dirname, '../../packages/events/forks/ResponderTopLevelEventTypes.dom.js'),
+        './ResponderTopLevelEventTypes': resolve(__dirname, '../../packages/events/forks/ResponderTopLevelEventTypes.dom.js'),
       },
       // plugins: [new TsConfigPathsPlugin()],
     },

@@ -1,0 +1,24 @@
+{
+  "compilerOptions": {
+    "allowJs": true,
+    "allowSyntheticDefaultImports": true,
+    "baseUrl": ".",
+    "paths": {
+      "react/*": ["./packages/react/*"],
+      "events/*": ["./packages/events/*"],
+      "react-dom/*": ["./packages/react-dom/*"],
+      "react-is/*": ["./packages/react-is/*"],
+      "react-native-renderer/*": ["./packages/react-native-renderer/*"],
+      "react-noop-renderer/*": ["./packages/react-noop-renderer/*"],
+      "react-reconciler/*": ["./packages/react-reconciler/*"],
+      "react-scheduler/*": ["./packages/react-scheduler/*"],
+      "react-test-renderer/*": ["./packages/react-test-renderer/*"],
+      "shared/*": ["./packages/shared/*"],
+      "simple-cache-provider/*": ["./packages/simple-cache-provider/*"]
+    }
+  },
+  "exclude": [
+    "node_modules",
+    "examples/example/node_modules"
+  ]
+}
