@@ -21,7 +21,7 @@ import * as ReactNativeFrameScheduling from './ReactNativeFrameScheduling';
 import * as ReactNativeViewConfigRegistry from 'ReactNativeViewConfigRegistry';
 
 import deepFreezeAndThrowOnMutationInDev from 'deepFreezeAndThrowOnMutationInDev';
-import invariant from 'fbjs/lib/invariant';
+import invariant from 'shared/invariant';
 
 import {dispatchEvent} from './ReactFabricEventEmitter';
 
@@ -293,6 +293,8 @@ export function prepareUpdate(
   );
   // TODO: If the event handlers have changed, we need to update the current props
   // in the commit phase but there is no host config hook to do it yet.
+  // So instead we hack it by updating it in the render phase.
+  instance.canonical.currentProps = newProps;
   return updatePayload;
 }
 

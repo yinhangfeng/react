@@ -10,10 +10,14 @@ import React from 'react';
 import {isForwardRef} from 'react-is';
 import describeComponentFrame from 'shared/describeComponentFrame';
 import getComponentName from 'shared/getComponentName';
-import emptyObject from 'fbjs/lib/emptyObject';
-import invariant from 'fbjs/lib/invariant';
-import shallowEqual from 'fbjs/lib/shallowEqual';
+import shallowEqual from 'shared/shallowEqual';
+import invariant from 'shared/invariant';
 import checkPropTypes from 'prop-types/checkPropTypes';
+
+const emptyObject = {};
+if (__DEV__) {
+  Object.freeze(emptyObject);
+}
 
 class ReactShallowRenderer {
   static createRenderer = function() {
@@ -238,14 +242,14 @@ class ReactShallowRenderer {
     const {type} = this._element;
 
     if (typeof type.getDerivedStateFromProps === 'function') {
+      const oldState = this._newState || this._instance.state;
       const partialState = type.getDerivedStateFromProps.call(
         null,
         props,
-        this._instance.state,
+        oldState,
       );
 
       if (partialState != null) {
-        const oldState = this._newState || this._instance.state;
         const newState = Object.assign({}, oldState, partialState);
         this._instance.state = this._newState = newState;
       }

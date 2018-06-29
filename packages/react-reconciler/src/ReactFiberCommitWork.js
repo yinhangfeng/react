@@ -38,8 +38,8 @@ import {
   Update,
 } from 'shared/ReactTypeOfSideEffect';
 import {commitUpdateQueue} from './ReactUpdateQueue';
-import invariant from 'fbjs/lib/invariant';
-import warning from 'fbjs/lib/warning';
+import invariant from 'shared/invariant';
+import warning from 'shared/warning';
 
 import {onCommitUnmount} from './ReactFiberDevToolsHook';
 import {startPhaseTimer, stopPhaseTimer} from './ReactDebugFiberPerf';
@@ -224,7 +224,6 @@ function commitLifeCycles(
   finishedRoot: FiberRoot,
   current: Fiber | null,
   finishedWork: Fiber,
-  currentTime: ExpirationTime,
   committedExpirationTime: ExpirationTime,
 ): void {
   switch (finishedWork.tag) {

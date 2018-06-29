@@ -55,15 +55,17 @@ import {
   recordElapsedActualRenderTime,
 } from './ReactProfilerTimer';
 import {
-  suspendRoot,
+  markTimeout,
+  markError,
   onUncaughtError,
   markLegacyErrorBoundaryAsFailed,
   isAlreadyFailedLegacyErrorBoundary,
-  recalculateCurrentTime,
+  requestCurrentTime,
   computeExpirationForFiber,
   scheduleWork,
   retrySuspendedRoot,
 } from './ReactFiberScheduler';
+import {hasLowerPriorityWork} from './ReactFiberPendingPriority';
 
 function createRootErrorUpdate(
   fiber: Fiber,
@@ -130,7 +132,7 @@ function createClassErrorUpdate(
 function schedulePing(finishedWork) {
   // Once the promise resolves, we should try rendering the non-
   // placeholder state again.
-  const currentTime = recalculateCurrentTime();
+  const currentTime = requestCurrentTime();
   const expirationTime = computeExpirationForFiber(currentTime, finishedWork);
   const recoveryUpdate = createUpdate(expirationTime);
   enqueueUpdate(finishedWork, recoveryUpdate, expirationTime);
@@ -142,9 +144,7 @@ function throwException(
   returnFiber: Fiber,
   sourceFiber: Fiber,
   value: mixed,
-  renderIsExpired: boolean,
   renderExpirationTime: ExpirationTime,
-  currentTimeMs: number,
 ) {
   // The source fiber did not complete.
   sourceFiber.effectTag |= Incomplete;
@@ -160,7 +160,10 @@ function throwException(
     // This is a thenable.
     const thenable: Thenable = (value: any);
 
+    // TODO: Should use the earliest known expiration time
+    const currentTime = requestCurrentTime();
     const expirationTimeMs = expirationTimeToMs(renderExpirationTime);
+    const currentTimeMs = expirationTimeToMs(currentTime);
     const startTimeMs = expirationTimeMs - 5000;
     let elapsedMs = currentTimeMs - startTimeMs;
     if (elapsedMs < 0) {
@@ -206,7 +209,7 @@ function throwException(
 
     if (renderExpirationTime === Never || msUntilTimeout > 0) {
       // There's still time remaining.
-      suspendRoot(root, thenable, msUntilTimeout, renderExpirationTime);
+      markTimeout(root, thenable, msUntilTimeout, renderExpirationTime);
       const onResolveOrReject = () => {
         retrySuspendedRoot(root, renderExpirationTime);
       };
@@ -244,6 +247,20 @@ function throwException(
         }
         workInProgress = workInProgress.return;
       } while (workInProgress !== null);
+    }
+  } else {
+    // This is an error.
+    markError(root);
+    if (
+      // Retry (at the same priority) one more time before handling the error.
+      // The retry will flush synchronously. (Unless we're already rendering
+      // synchronously, in which case move to the next check.)
+      (!root.didError && renderExpirationTime !== Sync) ||
+      // There's lower priority work. If so, it may have the effect of fixing
+      // the exception that was just thrown.
+      hasLowerPriorityWork(root, renderExpirationTime)
+    ) {
+      return;
     }
   }
 
@@ -298,7 +315,6 @@ function throwException(
 
 function unwindWork(
   workInProgress: Fiber,
-  renderIsExpired: boolean,
   renderExpirationTime: ExpirationTime,
 ) {
   if (enableProfilerTimer) {

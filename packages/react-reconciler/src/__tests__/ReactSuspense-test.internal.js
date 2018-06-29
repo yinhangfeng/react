@@ -14,6 +14,7 @@ describe('ReactSuspense', () => {
     jest.resetModules();
     ReactFeatureFlags = require('shared/ReactFeatureFlags');
     ReactFeatureFlags.debugRenderPhaseSideEffectsForStrictMode = false;
+    ReactFeatureFlags.replayFailedUnitOfWorkWithInvokeGuardedCallback = false;
     ReactFeatureFlags.enableSuspense = true;
     React = require('react');
     Fragment = React.Fragment;
@@ -258,6 +259,11 @@ describe('ReactSuspense', () => {
     expect(ReactNoop.flush()).toEqual([
       'Promise rejected [Result]',
       'Error! [Result]',
+
+      // React retries one more time
+      'Error! [Result]',
+
+      // Errored again on retry. Now handle it.
       'Caught error: Failed to load: Result',
     ]);
     expect(ReactNoop.getChildren()).toEqual([
@@ -320,6 +326,12 @@ describe('ReactSuspense', () => {
     expect(ReactNoop.flush()).toEqual([
       'Promise rejected [Result]',
       'Error! [Result]',
+
+      // React retries one more time
+      'Error! [Result]',
+
+      // Errored again on retry. Now handle it.
+
       'Caught error: Failed to load: Result',
     ]);
     expect(ReactNoop.getChildren()).toEqual([
@@ -699,9 +711,8 @@ describe('ReactSuspense', () => {
     );
     expect(ReactNoop.flush()).toEqual(['Suspend! [Async]']);
     await advanceTimers(10000);
-    ReactNoop.expire(10000);
     expect(() => {
-      expect(ReactNoop.flush()).toEqual(['Suspend! [Async]']);
+      ReactNoop.expire(10000);
     }).toThrow(
       'An update was suspended for longer than the timeout, but no fallback ' +
         'UI was provided.',
@@ -715,8 +726,7 @@ describe('ReactSuspense', () => {
         <AsyncText text="B" ms={100} />
       </Fallback>,
     );
-    ReactNoop.expire(10000);
-    expect(ReactNoop.flush()).toEqual(['Suspend! [A]', 'Suspend! [B]']);
+    expect(ReactNoop.expire(10000)).toEqual(['Suspend! [A]', 'Suspend! [B]']);
     expect(ReactNoop.getChildren()).toEqual([]);
 
     await advanceTimers(100);

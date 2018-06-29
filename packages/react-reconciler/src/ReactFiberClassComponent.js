@@ -10,21 +10,20 @@
 import type {Fiber} from './ReactFiber';
 import type {ExpirationTime} from './ReactFiberExpirationTime';
 
+import React from 'react';
 import {Update, Snapshot} from 'shared/ReactTypeOfSideEffect';
 import {
   debugRenderPhaseSideEffects,
   debugRenderPhaseSideEffectsForStrictMode,
   warnAboutDeprecatedLifecycles,
-  fireGetDerivedStateFromPropsOnStateUpdates,
 } from 'shared/ReactFeatureFlags';
 import ReactStrictModeWarnings from './ReactStrictModeWarnings';
 import {isMounted} from 'react-reconciler/reflection';
 import * as ReactInstanceMap from 'shared/ReactInstanceMap';
-import emptyObject from 'fbjs/lib/emptyObject';
+import shallowEqual from 'shared/shallowEqual';
 import getComponentName from 'shared/getComponentName';
-import shallowEqual from 'fbjs/lib/shallowEqual';
-import invariant from 'fbjs/lib/invariant';
-import warning from 'fbjs/lib/warning';
+import invariant from 'shared/invariant';
+import warning from 'shared/warning';
 
 import {startPhaseTimer, stopPhaseTimer} from './ReactDebugFiberPerf';
 import {StrictMode} from './ReactTypeOfMode';
@@ -44,15 +43,20 @@ import {
   getUnmaskedContext,
   isContextConsumer,
   hasContextChanged,
+  emptyContextObject,
 } from './ReactFiberContext';
 import {
-  recalculateCurrentTime,
+  requestCurrentTime,
   computeExpirationForFiber,
   scheduleWork,
 } from './ReactFiberScheduler';
 
 const fakeInternalInstance = {};
 const isArray = Array.isArray;
+
+// React.Component uses a shared frozen object by default.
+// We'll use it to determine whether we need to initialize legacy refs.
+export const emptyRefsObject = new React.Component().refs;
 
 let didWarnAboutStateAssignmentForComponent;
 let didWarnAboutUninitializedState;
@@ -167,7 +171,7 @@ const classComponentUpdater = {
   isMounted,
   enqueueSetState(inst, payload, callback) {
     const fiber = ReactInstanceMap.get(inst);
-    const currentTime = recalculateCurrentTime();
+    const currentTime = requestCurrentTime();
     const expirationTime = computeExpirationForFiber(currentTime, fiber);
 
     const update = createUpdate(expirationTime);
@@ -184,7 +188,7 @@ const classComponentUpdater = {
   },
   enqueueReplaceState(inst, payload, callback) {
     const fiber = ReactInstanceMap.get(inst);
-    const currentTime = recalculateCurrentTime();
+    const currentTime = requestCurrentTime();
     const expirationTime = computeExpirationForFiber(currentTime, fiber);
 
     const update = createUpdate(expirationTime);
@@ -203,7 +207,7 @@ const classComponentUpdater = {
   },
   enqueueForceUpdate(inst, callback) {
     const fiber = ReactInstanceMap.get(inst);
-    const currentTime = recalculateCurrentTime();
+    const currentTime = requestCurrentTime();
     const expirationTime = computeExpirationForFiber(currentTime, fiber);
 
     const update = createUpdate(expirationTime);
@@ -470,7 +474,7 @@ function constructClassInstance(
   const needsContext = isContextConsumer(workInProgress);
   const context = needsContext
     ? getMaskedContext(workInProgress, unmaskedContext)
-    : emptyObject;
+    : emptyContextObject;
 
   // Instantiate twice to help detect side-effects.
   if (__DEV__) {
@@ -659,7 +663,7 @@ function mountClassInstance(
 
   instance.props = props;
   instance.state = workInProgress.memoizedState;
-  instance.refs = emptyObject;
+  instance.refs = emptyRefsObject;
   instance.context = getMaskedContext(workInProgress, unmaskedContext);
 
   if (__DEV__) {
@@ -949,14 +953,12 @@ function updateClassInstance(
   }
 
   if (typeof getDerivedStateFromProps === 'function') {
-    if (fireGetDerivedStateFromPropsOnStateUpdates || oldProps !== newProps) {
-      applyDerivedStateFromProps(
-        workInProgress,
-        getDerivedStateFromProps,
-        newProps,
-      );
-      newState = workInProgress.memoizedState;
-    }
+    applyDerivedStateFromProps(
+      workInProgress,
+      getDerivedStateFromProps,
+      newProps,
+    );
+    newState = workInProgress.memoizedState;
   }
 
   const shouldUpdate =

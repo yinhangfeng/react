@@ -20,12 +20,12 @@ import ReactVersion from 'shared/ReactVersion';
 
 import NativeMethodsMixin from './NativeMethodsMixin';
 import ReactNativeComponent from './ReactNativeComponent';
-import * as ReactNativeComponentTree from './ReactNativeComponentTree';
+import * as ReactFabricComponentTree from './ReactFabricComponentTree';
 import {getInspectorDataForViewTag} from './ReactNativeFiberInspector';
 
 import {ReactCurrentOwner} from 'shared/ReactGlobalSharedState';
 import getComponentName from 'shared/getComponentName';
-import warning from 'fbjs/lib/warning';
+import warning from 'shared/warning';
 
 const findHostInstance = ReactFabricRenderer.findHostInstance;
 
@@ -120,7 +120,7 @@ const ReactFabric: ReactFabricType = {
 };
 
 ReactFabricRenderer.injectIntoDevTools({
-  findFiberByHostInstance: ReactNativeComponentTree.getClosestInstanceFromNode,
+  findFiberByHostInstance: ReactFabricComponentTree.getClosestInstanceFromNode,
   getInspectorDataForViewTag: getInspectorDataForViewTag,
   bundleType: __DEV__ ? 1 : 0,
   version: ReactVersion,

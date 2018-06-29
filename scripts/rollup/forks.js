@@ -8,10 +8,13 @@ const UMD_DEV = bundleTypes.UMD_DEV;
 const UMD_PROD = bundleTypes.UMD_PROD;
 const FB_WWW_DEV = bundleTypes.FB_WWW_DEV;
 const FB_WWW_PROD = bundleTypes.FB_WWW_PROD;
+const FB_WWW_PROFILING = bundleTypes.FB_WWW_PROFILING;
 const RN_OSS_DEV = bundleTypes.RN_OSS_DEV;
 const RN_OSS_PROD = bundleTypes.RN_OSS_PROD;
+const RN_OSS_PROFILING = bundleTypes.RN_OSS_PROFILING;
 const RN_FB_DEV = bundleTypes.RN_FB_DEV;
 const RN_FB_PROD = bundleTypes.RN_FB_PROD;
+const RN_FB_PROFILING = bundleTypes.RN_FB_PROFILING;
 const RENDERER = moduleTypes.RENDERER;
 const RECONCILER = moduleTypes.RECONCILER;
 
@@ -42,9 +45,11 @@ const forks = Object.freeze({
         switch (bundleType) {
           case RN_FB_DEV:
           case RN_FB_PROD:
+          case RN_FB_PROFILING:
             return 'shared/forks/ReactFeatureFlags.native-fb.js';
           case RN_OSS_DEV:
           case RN_OSS_PROD:
+          case RN_OSS_PROFILING:
             return 'shared/forks/ReactFeatureFlags.native-oss.js';
           default:
             throw Error(
@@ -55,9 +60,11 @@ const forks = Object.freeze({
         switch (bundleType) {
           case RN_FB_DEV:
           case RN_FB_PROD:
+          case RN_FB_PROFILING:
             return 'shared/forks/ReactFeatureFlags.native-fabric-fb.js';
           case RN_OSS_DEV:
           case RN_OSS_PROD:
+          case RN_OSS_PROFILING:
             return 'shared/forks/ReactFeatureFlags.native-fabric-oss.js';
           default:
             throw Error(
@@ -72,29 +79,31 @@ const forks = Object.freeze({
         switch (bundleType) {
           case FB_WWW_DEV:
           case FB_WWW_PROD:
+          case FB_WWW_PROFILING:
             return 'shared/forks/ReactFeatureFlags.www.js';
         }
     }
     return null;
   },
 
-  // This logic is forked on www to use the 'acrossTransitions' version.
-  // This will be removed soon, see internal task T29442940
-  'shared/requestAnimationFrameForReact': (bundleType, entry) => {
+  'shared/ReactScheduler': (bundleType, entry) => {
     switch (bundleType) {
       case FB_WWW_DEV:
       case FB_WWW_PROD:
-        return 'shared/forks/requestAnimationFrameForReact.www.js';
+      case FB_WWW_PROFILING:
+        return 'shared/forks/ReactScheduler.www.js';
       default:
         return null;
     }
   },
 
-  'shared/ReactScheduler': (bundleType, entry) => {
+  // This logic is forked on www to fork the formatting function.
+  'shared/invariant': (bundleType, entry) => {
     switch (bundleType) {
       case FB_WWW_DEV:
       case FB_WWW_PROD:
-        return 'shared/forks/ReactScheduler.www.js';
+      case FB_WWW_PROFILING:
+        return 'shared/forks/invariant.www.js';
       default:
         return null;
     }
@@ -105,7 +114,20 @@ const forks = Object.freeze({
     switch (bundleType) {
       case FB_WWW_DEV:
       case FB_WWW_PROD:
+      case FB_WWW_PROFILING:
         return 'shared/forks/lowPriorityWarning.www.js';
+      default:
+        return null;
+    }
+  },
+
+  // This logic is forked on www to blacklist warnings.
+  'shared/warning': (bundleType, entry) => {
+    switch (bundleType) {
+      case FB_WWW_DEV:
+      case FB_WWW_PROD:
+      case FB_WWW_PROFILING:
+        return 'shared/forks/warning.www.js';
       default:
         return null;
     }
@@ -117,6 +139,7 @@ const forks = Object.freeze({
     switch (bundleType) {
       case FB_WWW_DEV:
       case FB_WWW_PROD:
+      case FB_WWW_PROFILING:
         return 'react/src/forks/ReactCurrentOwner.www.js';
       default:
         return null;
@@ -128,6 +151,7 @@ const forks = Object.freeze({
     switch (bundleType) {
       case FB_WWW_DEV:
       case FB_WWW_PROD:
+      case FB_WWW_PROFILING:
         return 'shared/forks/invokeGuardedCallback.www.js';
       default:
         return null;
@@ -139,12 +163,15 @@ const forks = Object.freeze({
     switch (bundleType) {
       case FB_WWW_DEV:
       case FB_WWW_PROD:
+      case FB_WWW_PROFILING:
         // Use the www fork which shows an error dialog.
         return 'react-reconciler/src/forks/ReactFiberErrorDialog.www.js';
       case RN_OSS_DEV:
       case RN_OSS_PROD:
+      case RN_OSS_PROFILING:
       case RN_FB_DEV:
       case RN_FB_PROD:
+      case RN_FB_PROFILING:
         switch (entry) {
           case 'react-native-renderer':
           case 'react-native-renderer/fabric':
@@ -190,6 +217,7 @@ const forks = Object.freeze({
     switch (bundleType) {
       case FB_WWW_DEV:
       case FB_WWW_PROD:
+      case FB_WWW_PROFILING:
         // Use the www fork which is integrated with TimeSlice profiling.
         return 'react-dom/src/events/forks/EventListener-www.js';
       default:
