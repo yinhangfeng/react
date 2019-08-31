@@ -7,6 +7,7 @@ import React, {
   Component,
   PureComponent,
   createElement,
+  forwardRef,
 } from 'react';
 import ReactDOM from 'react-dom';
 import test from './test';
@@ -158,10 +159,43 @@ export default class App extends Component {
 
 class Test1 extends Component {
   render() {
-    return this.props.children;
+    return (
+      <FunctionalComp>
+        <div>
+          <Test2 ref="xxx"/>
+          {this.props.children}
+          <TestForwardRef ref="TestForwardRef"/>
+        </div>
+      </FunctionalComp>
+    );
   }
 
   componentDidMount() {
     console.log('Test1 componentDidMount refs:', this.refs);
   }
+}
+
+class Test2 extends Component {
+  render() {
+    return (
+      <div>Test2</div>
+    );
+  }
+
+  componentDidMount() {
+    console.log('Test1 componentDidMount refs:', this.refs);
+  }
+}
+
+const TestForwardRef = forwardRef((props, ref) => {
+  console.log('forwardRef ref:', ref);
+  return (
+    <div ref={ref}>
+      TestForwardRef
+    </div>
+  );
+});
+
+function FunctionalComp(props) {
+  return props.children;
 }

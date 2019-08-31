@@ -193,10 +193,12 @@ module.exports = function(env = { production: false } , argv) {
       }),
 
     // 只定义 process.env.NODE_ENV 的话在 webpack4 以上可以省略
+    // 对应 scripts/rollup/build.js replace plugin
     new webpack.DefinePlugin({
       'process.env.NODE_ENV': JSON.stringify(isDev ? 'development' : 'production'),
       // 'process.env.HMR': process.env.HMR,
       __DEV__: isDev,
+      __PROFILE__: false,
     }),
     new HTMLWebpackPlugin({
       template: projectPath('src/index.ejs'),
