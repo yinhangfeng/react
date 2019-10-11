@@ -236,6 +236,7 @@ function checkShouldComponentUpdate(
   const instance = workInProgress.stateNode;
   const ctor = workInProgress.type;
   if (typeof instance.shouldComponentUpdate === 'function') {
+    console.log('checkShouldComponentUpdate shouldComponentUpdate', ctor.name);
     startPhaseTimer(workInProgress, 'shouldComponentUpdate');
     const shouldUpdate = instance.shouldComponentUpdate(
       newProps,
@@ -257,6 +258,7 @@ function checkShouldComponentUpdate(
   }
 
   if (ctor.prototype && ctor.prototype.isPureReactComponent) {
+    console.log('checkShouldComponentUpdate isPureReactComponent', ctor.name);
     return (
       !shallowEqual(oldProps, newProps) || !shallowEqual(oldState, newState)
     );

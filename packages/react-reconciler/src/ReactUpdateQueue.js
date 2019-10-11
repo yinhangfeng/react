@@ -422,6 +422,7 @@ function getStateFromUpdate<State>(
       return Object.assign({}, prevState, partialState);
     }
     case ForceUpdate: {
+      console.log('getStateFromUpdate ForceUpdate hasForceUpdate = true');
       hasForceUpdate = true;
       return prevState;
     }
@@ -436,6 +437,7 @@ export function processUpdateQueue<State>(
   instance: any,
   renderExpirationTime: ExpirationTime,
 ): void {
+  console.log('processUpdateQueue hasForceUpdate = false');
   hasForceUpdate = false;
 
   if (
@@ -597,6 +599,7 @@ function callCallback(callback, context) {
 }
 
 export function resetHasForceUpdateBeforeProcessing() {
+  console.log('resetHasForceUpdateBeforeProcessing hasForceUpdate = false');
   hasForceUpdate = false;
 }
 

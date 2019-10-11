@@ -13,11 +13,18 @@ import ReactDOM from 'react-dom';
 import test from './test';
 import TestComp from './TestComp';
 import ThemeContext from './ThemeContext';
+import Theme from './Theme';
+import TestComp1 from './TestComp1';
+import TestComp2 from './TestComp2';
+import TestComp3 from './TestComp3';
 
 export default class App extends Component {
   constructor() {
     super();
-    this.state = { test1: 1 };
+    this.state = {
+      test1: 1,
+      xxx: 0,
+    };
   }
 
   componentDidMount() {
@@ -71,6 +78,28 @@ export default class App extends Component {
           onClick={this.props.changeTheme}
         >
           changeTheme
+        </button>
+        <button
+          onClick={() => {
+            Theme.xxx++;
+            this.setState(prevState => {
+              return {
+                ...prevState,
+                xxx: prevState.xxx + 1,
+              };
+            });
+          }}
+        >
+          update1
+        </button>
+        <button
+          onClick={() => {
+            Theme.xxx++;
+            this.state.xxx++;
+            this.forceUpdate();
+          }}
+        >
+          update2
         </button>
         <ThemeContext.Consumer>
           {(theme) => {
@@ -136,6 +165,9 @@ export default class App extends Component {
         /> */}
         {/* {this._renderChildren()} */}
         <TestComp/>
+        <TestComp1 />
+        <TestComp2 />
+        <TestComp3 />
       </div>
     );
   }
